@@ -558,26 +558,34 @@ if st.session_state.images:
     st.divider()
     st.header("📄 Экспорт дизайн-проекта")
     
-    try:
-        project_data = {
-            'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
-            'room_type': st.session_state.room_type,
-            'purpose': st.session_state.purpose,
-            'analysis': st.session_state.analysis,
-            'variants': st.session_state.images,
-            'recommendations': st.session_state.saved_recommendations,
-            'created_at': datetime.now().strftime('%d.%m.%Y')
-        }
-        
-        pdf_buffer = generate_design_pdf(project_data)
-        
+    if 'pdf_buffer' not in st.session_state:
+        st.session_state.pdf_buffer = None
+    
+    if st.button("📥 Скачать PDF-отчет", key="generate_pdf_btn", use_container_width=True):
+        with st.spinner("📄 Создаю PDF-отчет..."):
+            try:
+                project_data = {
+                    'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
+                    'room_type': st.session_state.room_type,
+                    'purpose': st.session_state.purpose,
+                    'analysis': st.session_state.analysis,
+                    'variants': st.session_state.images,
+                    'recommendations': st.session_state.saved_recommendations,
+                    'created_at': datetime.now().strftime('%d.%m.%Y')
+                }
+                
+                st.session_state.pdf_buffer = generate_design_pdf(project_data)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Ошибка при создании PDF: {str(e)}")
+    
+    if st.session_state.pdf_buffer:
         st.download_button(
-            label="📥 Скачать PDF-отчет",
-            data=pdf_buffer,
+            label="💾 Сохранить PDF на компьютер",
+            data=st.session_state.pdf_buffer,
             file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
             mime="application/pdf",
             key="download_pdf_btn",
             use_container_width=True
         )
-    except Exception as e:
-        st.error(f"Ошибка при создании PDF: {str(e)}")
+        st.success("✅ PDF-отчет готов к скачиванию!")

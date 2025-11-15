@@ -1,6 +1,6 @@
 # Overview
 
-This is an AI-powered interior design assistant built with Streamlit that helps users analyze and reimagine their living spaces. The application uses OpenAI's GPT-4o Vision to analyze uploaded room photos, providing professional design feedback, and DALL-E 3 to generate photorealistic visualizations of proposed renovations. Users upload images of their rooms, receive detailed architectural and design analysis, and can generate new design concepts based on AI recommendations.
+This is an AI-powered interior design assistant built with Streamlit that helps users analyze and reimagine their living spaces. The application uses OpenAI's GPT-4o Vision to analyze uploaded room photos, providing professional design feedback, and DALL-E 3 to generate photorealistic visualizations of proposed renovations. Users can upload images, receive detailed architectural analysis, generate design variants, compare options side-by-side, get material shopping lists, estimate renovation costs, save/load projects, and export complete design packages as PDF reports.
 
 # User Preferences
 
@@ -31,11 +31,13 @@ The application implements a two-stage AI workflow:
 Session state (`st.session_state`) stores the analysis results between reruns, preventing redundant API calls when users interact with the UI. This pattern is essential in Streamlit to maintain data across user interactions.
 
 ## Module Organization
-Code is separated into three focused modules:
+Code is separated into focused modules:
 
-- **app.py**: UI logic, layout, and user interactions
+- **app.py**: Main UI logic, layout, user interactions, and workflow orchestration
 - **prompts.py**: System prompts as constants for maintainability and version control
 - **utils.py**: Reusable API wrapper functions (image encoding, OpenAI API calls)
+- **database.py**: PostgreSQL database models and session management using SQLAlchemy
+- **pdf_generator.py**: PDF report generation using ReportLab
 
 **Benefits**: Clear separation of concerns, easier testing, and simplified prompt engineering iterations without touching application logic.
 
@@ -59,9 +61,29 @@ API calls are wrapped in try-except blocks within utility functions, with error 
 - **openai** (1.12.0): Official OpenAI Python client
 - **Pillow** (10.2.0): Image manipulation and format handling
 - **python-dotenv** (1.0.1): Environment variable management for API key security
+- **sqlalchemy** (2.0.44): Database ORM for project persistence
+- **psycopg2-binary** (2.9.11): PostgreSQL adapter for Python
+- **reportlab** (4.4.4): PDF generation library
+- **httpx** (0.27.2): HTTP client (pinned for OpenAI compatibility)
+
+## Database Architecture
+Uses PostgreSQL for project persistence with three main tables:
+- **projects**: Stores project metadata, room analysis, and base64-encoded images
+- **design_variants**: Stores generated design images with prompts and iteration counts
+- **recommendations**: Stores material recommendations and shopping lists
+
+**Rationale**: Enables users to save/load projects across sessions, compare multiple design iterations, and maintain project history.
 
 ## Environment Configuration
-API authentication uses environment variables loaded via dotenv, keeping sensitive credentials out of version control. Required variable: `OPENAI_API_KEY`
+API authentication uses environment variables loaded via dotenv, keeping sensitive credentials out of version control. Required variables:
+- `OPENAI_API_KEY`: OpenAI API authentication
+- `DATABASE_URL`: PostgreSQL connection string (auto-configured by Replit)
 
-## Missing Implementation
-The `generate_image` function is imported in app.py but not defined in utils.py - this needs to be implemented to complete the DALL-E 3 integration workflow.
+# Recent Changes (November 15, 2025)
+
+## Phase 2 Features Implemented
+1. **Project Persistence**: Full save/load functionality with PostgreSQL database
+2. **Design Comparison**: Side-by-side variant comparison view
+3. **Shopping List Generator**: AI-powered material shopping lists with store links
+4. **Budget Calculator**: Interactive renovation cost estimation with category breakdowns
+5. **PDF Export**: Complete design packages with images and recommendations

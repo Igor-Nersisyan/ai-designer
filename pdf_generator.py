@@ -4,10 +4,15 @@ from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, PageBreak, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from io import BytesIO
 import requests
 from PIL import Image
 import io
+
+pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
 
 def generate_design_pdf(project_data):
     buffer = BytesIO()
@@ -21,6 +26,7 @@ def generate_design_pdf(project_data):
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
+        fontName='DejaVuSans-Bold',
         fontSize=24,
         textColor=colors.HexColor('#1f1f1f'),
         spaceAfter=30,
@@ -30,6 +36,7 @@ def generate_design_pdf(project_data):
     heading_style = ParagraphStyle(
         'CustomHeading',
         parent=styles['Heading2'],
+        fontName='DejaVuSans-Bold',
         fontSize=16,
         textColor=colors.HexColor('#1f1f1f'),
         spaceAfter=12,
@@ -39,6 +46,7 @@ def generate_design_pdf(project_data):
     body_style = ParagraphStyle(
         'CustomBody',
         parent=styles['BodyText'],
+        fontName='DejaVuSans',
         fontSize=10,
         spaceAfter=12
     )
@@ -57,7 +65,8 @@ def generate_design_pdf(project_data):
         ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f0f0f0')),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (0, -1), 'DejaVuSans-Bold'),
+        ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
         ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cccccc'))

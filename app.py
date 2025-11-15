@@ -47,6 +47,30 @@ h1 {
     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     margin-bottom: 1rem;
 }
+[data-testid="stFileUploader"] section button {
+    display: none;
+}
+[data-testid="stFileUploader"] section > div {
+    padding: 2rem;
+}
+[data-testid="stFileUploader"] section small {
+    display: none;
+}
+[data-testid="stFileUploader"] section::before {
+    content: "Перетащите файл сюда";
+    display: block;
+    text-align: center;
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 0.5rem;
+}
+[data-testid="stFileUploader"] section::after {
+    content: "Максимальный размер файла: 200MB";
+    display: block;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #999;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -66,6 +90,62 @@ if 'current_project_id' not in st.session_state:
     st.session_state.current_project_id = None
 if 'saved_recommendations' not in st.session_state:
     st.session_state.saved_recommendations = None
+if 'last_selected_project' not in st.session_state:
+    st.session_state.last_selected_project = None
+if 'auto_save_enabled' not in st.session_state:
+    st.session_state.auto_save_enabled = False
+
+def auto_save_project():
+    if not st.session_state.auto_save_enabled or not st.session_state.analysis:
+        return
+    
+    db = SessionLocal()
+    try:
+        project_name = f"Проект {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        if st.session_state.current_project_id:
+            project = db.query(Project).filter(Project.id == st.session_state.current_project_id).first()
+            if project:
+                project.room_type = st.session_state.room_type
+                project.purpose = st.session_state.purpose
+                project.analysis = st.session_state.analysis
+                project.uploaded_image_b64 = st.session_state.uploaded_image_b64
+                project.updated_at = datetime.utcnow()
+                
+                db.query(DesignVariant).filter(DesignVariant.project_id == project.id).delete()
+        else:
+            project = Project(
+                name=project_name,
+                room_type=st.session_state.room_type,
+                purpose=st.session_state.purpose,
+                analysis=st.session_state.analysis,
+                uploaded_image_b64=st.session_state.uploaded_image_b64
+            )
+            db.add(project)
+            db.flush()
+            st.session_state.current_project_id = project.id
+        
+        for img_data in st.session_state.images:
+            variant = DesignVariant(
+                project_id=project.id,
+                image_url=img_data['url'],
+                prompt=img_data['prompt'],
+                iterations=img_data['iterations']
+            )
+            db.add(variant)
+        
+        if st.session_state.saved_recommendations:
+            db.query(Recommendation).filter(Recommendation.project_id == project.id).delete()
+            rec = Recommendation(
+                project_id=project.id,
+                content=st.session_state.saved_recommendations
+            )
+            db.add(rec)
+        
+        db.commit()
+    except Exception as e:
+        db.rollback()
+    finally:
+        db.close()
 
 st.title("🏠 AI-Дизайнер по ремонту")
 st.markdown("Загрузите фото помещения и получите профессиональный дизайн-проект")
@@ -84,15 +164,18 @@ with st.sidebar:
             key="project_selector"
         )
         
-        if selected_project != "Новый проект":
-            project_idx = project_options.index(selected_project) - 1
-            if st.button("📂 Загрузить проект", key="load_project_btn"):
+        if selected_project != st.session_state.last_selected_project:
+            st.session_state.last_selected_project = selected_project
+            
+            if selected_project != "Новый проект":
+                project_idx = project_options.index(selected_project) - 1
                 project = projects[project_idx]
                 st.session_state.current_project_id = project.id
                 st.session_state.room_type = project.room_type
                 st.session_state.purpose = project.purpose
                 st.session_state.analysis = project.analysis
                 st.session_state.uploaded_image_b64 = project.uploaded_image_b64
+                st.session_state.auto_save_enabled = True
                 
                 variants = db.query(DesignVariant).filter(DesignVariant.project_id == project.id).all()
                 st.session_state.images = [
@@ -106,8 +189,18 @@ with st.sidebar:
                 recommendations = db.query(Recommendation).filter(Recommendation.project_id == project.id).first()
                 if recommendations:
                     st.session_state.saved_recommendations = recommendations.content
+                else:
+                    st.session_state.saved_recommendations = None
                 
-                st.success(f"Проект '{project.name}' загружен!")
+                st.rerun()
+            else:
+                for key in ['current_project_id', 'room_type', 'purpose', 'analysis', 'uploaded_image_b64', 'images', 'saved_recommendations']:
+                    if key in st.session_state:
+                        if key == 'images':
+                            st.session_state[key] = []
+                        else:
+                            st.session_state[key] = None
+                st.session_state.auto_save_enabled = False
                 st.rerun()
     
     db.close()
@@ -142,60 +235,6 @@ with st.sidebar:
     
     st.divider()
     
-    if st.session_state.analysis:
-        project_name = st.text_input("Название проекта", value=f"Проект {datetime.now().strftime('%d.%m.%Y')}")
-        if st.button("💾 Сохранить проект", key="save_project_btn"):
-            db = SessionLocal()
-            try:
-                if st.session_state.current_project_id:
-                    project = db.query(Project).filter(Project.id == st.session_state.current_project_id).first()
-                    project.name = project_name
-                    project.room_type = st.session_state.room_type
-                    project.purpose = st.session_state.purpose
-                    project.analysis = st.session_state.analysis
-                    project.uploaded_image_b64 = st.session_state.uploaded_image_b64
-                    project.updated_at = datetime.utcnow()
-                    
-                    db.query(DesignVariant).filter(DesignVariant.project_id == project.id).delete()
-                else:
-                    project = Project(
-                        name=project_name,
-                        room_type=st.session_state.room_type,
-                        purpose=st.session_state.purpose,
-                        analysis=st.session_state.analysis,
-                        uploaded_image_b64=st.session_state.uploaded_image_b64
-                    )
-                    db.add(project)
-                    db.flush()
-                    st.session_state.current_project_id = project.id
-                
-                for img_data in st.session_state.images:
-                    variant = DesignVariant(
-                        project_id=project.id,
-                        image_url=img_data['url'],
-                        prompt=img_data['prompt'],
-                        iterations=img_data['iterations']
-                    )
-                    db.add(variant)
-                
-                if st.session_state.saved_recommendations:
-                    db.query(Recommendation).filter(Recommendation.project_id == project.id).delete()
-                    rec = Recommendation(
-                        project_id=project.id,
-                        content=st.session_state.saved_recommendations
-                    )
-                    db.add(rec)
-                
-                db.commit()
-                st.success(f"Проект '{project_name}' сохранен!")
-            except Exception as e:
-                db.rollback()
-                st.error(f"Ошибка при сохранении: {str(e)}")
-            finally:
-                db.close()
-    
-    st.divider()
-    
     if st.button("🔄 Начать заново"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
@@ -204,6 +243,7 @@ with st.sidebar:
 if analyze_button and uploaded_file:
     st.session_state.room_type = room_type
     st.session_state.purpose = purpose
+    st.session_state.auto_save_enabled = True
     
     with st.spinner("🔍 Анализирую помещение..."):
         try:
@@ -214,6 +254,7 @@ if analyze_button and uploaded_file:
                 st.session_state.uploaded_image_b64
             )
             st.session_state.analysis = analysis
+            auto_save_project()
         except Exception as e:
             st.error(f"Ошибка при анализе изображения: {str(e)}")
             st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
@@ -274,6 +315,7 @@ if st.session_state.analysis:
                         'iterations': 0
                     })
                     
+                    auto_save_project()
                     st.success("✅ Дизайн-проект создан!")
                     st.rerun()
                 except Exception as e:
@@ -295,8 +337,31 @@ if st.session_state.images:
                 st.markdown(f"**Вариант {idx + 1}**")
                 st.caption(f"Итераций: {img_data['iterations']}")
                 
-                with st.expander("📝 Промпт для генерации"):
-                    st.text(img_data['prompt'])
+                with st.expander("📝 Промпт для генерации", expanded=False):
+                    edited_prompt = st.text_area(
+                        "Промпт (можно редактировать)",
+                        value=img_data['prompt'],
+                        height=150,
+                        key=f"prompt_edit_{idx}"
+                    )
+                    
+                    if edited_prompt != img_data['prompt']:
+                        if st.button("🔄 Перегенерировать с новым промптом", key=f"regen_{idx}"):
+                            with st.spinner("🎨 Генерирую новый вариант..."):
+                                try:
+                                    new_image_url = generate_image(client, edited_prompt)
+                                    st.session_state.images.append({
+                                        'url': new_image_url,
+                                        'prompt': edited_prompt,
+                                        'iterations': img_data['iterations'] + 1
+                                    })
+                                    auto_save_project()
+                                    st.success("✅ Новый вариант создан!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Ошибка: {str(e)}")
+                    else:
+                        st.text(img_data['prompt'])
                 
                 if st.button(f"🔧 Доработать этот вариант", key=f"refine_{idx}"):
                     st.session_state.selected_image_idx = idx
@@ -383,6 +448,7 @@ if st.session_state.images:
                     
                     st.session_state.selected_image_idx = None
                     
+                    auto_save_project()
                     st.success("✅ Новый вариант создан!")
                     st.rerun()
                 except Exception as e:
@@ -423,6 +489,7 @@ if st.session_state.images:
                 )
                 
                 st.session_state.saved_recommendations = recommendations
+                auto_save_project()
                 st.markdown(recommendations)
             except Exception as e:
                 st.error(f"Ошибка при формировании рекомендаций: {str(e)}")

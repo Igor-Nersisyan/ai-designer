@@ -102,13 +102,17 @@ if analyze_button and uploaded_file:
     st.session_state.purpose = purpose
     
     with st.spinner("🔍 Анализирую помещение..."):
-        analysis = call_gpt4o_vision(
-            client,
-            SYSTEM_PROMPT_ANALYZER,
-            f"Тип помещения: {room_type}\nЦель использования: {purpose}",
-            st.session_state.uploaded_image_b64
-        )
-        st.session_state.analysis = analysis
+        try:
+            analysis = call_gpt4o_vision(
+                client,
+                SYSTEM_PROMPT_ANALYZER,
+                f"Тип помещения: {room_type}\nЦель использования: {purpose}",
+                st.session_state.uploaded_image_b64
+            )
+            st.session_state.analysis = analysis
+        except Exception as e:
+            st.error(f"Ошибка при анализе изображения: {str(e)}")
+            st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
 
 if st.session_state.analysis:
     st.header("📊 Анализ вашего помещения")
@@ -142,10 +146,11 @@ if st.session_state.analysis:
             st.error("Выберите хотя бы один стиль")
         else:
             with st.spinner("🎨 Создаю дизайн-проект..."):
-                dalle_prompt = call_gpt4o(
-                    client,
-                    SYSTEM_PROMPT_DALLE_ENGINEER,
-                    f"""Анализ помещения:
+                try:
+                    dalle_prompt = call_gpt4o(
+                        client,
+                        SYSTEM_PROMPT_DALLE_ENGINEER,
+                        f"""Анализ помещения:
 {st.session_state.analysis}
 
 Тип помещения: {st.session_state.room_type}
@@ -155,18 +160,21 @@ if st.session_state.analysis:
 Дополнительно: {additional_preferences}
 
 Создай детальный промпт для DALL-E 3."""
-                )
-                
-                image_url = generate_image(client, dalle_prompt)
-                
-                st.session_state.images.append({
-                    'url': image_url,
-                    'prompt': dalle_prompt,
-                    'iterations': 0
-                })
-                
-            st.success("✅ Дизайн-проект создан!")
-            st.rerun()
+                    )
+                    
+                    image_url = generate_image(client, dalle_prompt)
+                    
+                    st.session_state.images.append({
+                        'url': image_url,
+                        'prompt': dalle_prompt,
+                        'iterations': 0
+                    })
+                    
+                    st.success("✅ Дизайн-проект создан!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Ошибка при создании дизайн-проекта: {str(e)}")
+                    st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
 
 if st.session_state.images:
     st.divider()
@@ -215,38 +223,43 @@ if st.session_state.images:
         
         if refine_button and feedback:
             with st.spinner("🎨 Дорабатываю дизайн..."):
-                refined_prompt = call_gpt4o(
-                    client,
-                    SYSTEM_PROMPT_DALLE_ENGINEER,
-                    f"""Исходный промпт:
+                try:
+                    refined_prompt = call_gpt4o(
+                        client,
+                        SYSTEM_PROMPT_DALLE_ENGINEER,
+                        f"""Исходный промпт:
 {current_img['prompt']}
 
 Фидбэк пользователя: {feedback}
 
 Создай НОВЫЙ промпт для DALL-E 3, учитывая фидбэк. Ответь ТОЛЬКО промптом."""
-                )
-                
-                new_image_url = generate_image(client, refined_prompt)
-                
-                st.session_state.images.append({
-                    'url': new_image_url,
-                    'prompt': refined_prompt,
-                    'iterations': current_img['iterations'] + 1
-                })
-                
-                st.session_state.selected_image_idx = None
-                
-            st.success("✅ Новый вариант создан!")
-            st.rerun()
+                    )
+                    
+                    new_image_url = generate_image(client, refined_prompt)
+                    
+                    st.session_state.images.append({
+                        'url': new_image_url,
+                        'prompt': refined_prompt,
+                        'iterations': current_img['iterations'] + 1
+                    })
+                    
+                    st.session_state.selected_image_idx = None
+                    
+                    st.success("✅ Новый вариант создан!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Ошибка при доработке дизайна: {str(e)}")
+                    st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
     
     st.divider()
     st.header("📋 Финальные рекомендации")
     
     if st.button("📝 Получить детальные рекомендации по материалам", key="get_recommendations"):
         with st.spinner("📝 Формирую рекомендации..."):
-            recommendations = call_gpt4o(
-                client,
-                """Ты — эксперт по дизайну интерьеров и материалам отделки. 
+            try:
+                recommendations = call_gpt4o(
+                    client,
+                    """Ты — эксперт по дизайну интерьеров и материалам отделки. 
 На основе анализа и выбранного дизайна дай детальные рекомендации по:
 1. Отделке стен (материалы, цвета, текстуры)
 2. Напольному покрытию (тип, цвет, характеристики)
@@ -256,7 +269,7 @@ if st.session_state.images:
 6. Декору и аксессуарам
 
 Будь конкретным: указывай бренды, артикулы, примерные цены (в рублях).""",
-                f"""Тип помещения: {st.session_state.room_type}
+                    f"""Тип помещения: {st.session_state.room_type}
 Цель: {st.session_state.purpose}
 
 Анализ:
@@ -266,6 +279,9 @@ if st.session_state.images:
 {st.session_state.images[-1]['prompt']}
 
 Дай детальные рекомендации."""
-            )
-            
-        st.markdown(recommendations)
+                )
+                
+                st.markdown(recommendations)
+            except Exception as e:
+                st.error(f"Ошибка при формировании рекомендаций: {str(e)}")
+                st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")

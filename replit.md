@@ -96,15 +96,21 @@ API authentication uses environment variables loaded via dotenv, keeping sensiti
 5. **PDF Cyrillic Support**: Fixed black squares in PDF exports by adding DejaVu font support for Russian text
 6. **Refinement UI Redesigned**: Refinement options now appear inline next to each design variant instead of separate section
 7. **Shopping List Persistence**: Shopping lists now save independently in database and load correctly with projects
+8. **Always-Visible Controls**: Removed toggle button for refinement menu - controls now always visible for better UX
+9. **Unconditional Regenerate Button**: Regenerate button always visible, no longer requires prompt changes
+10. **Direct Product Links**: Shopping list now generates direct links to specific products, not just store homepages
+11. **Optimized PDF Export**: Two-step process with on-demand generation and caching to avoid performance issues
 
 ## Technical Implementation
 - **Auto-load**: Uses session state tracking (`last_selected_project`) to detect changes and load automatically
 - **Auto-save**: Function `auto_save_project()` called after all mutation operations, controlled by `auto_save_enabled` flag
   - Updated logic: Persists recommendations and shopping lists independently (uses OR condition instead of AND)
   - Updates existing records or creates new ones to prevent data loss
-- **Prompt Editing**: Text area in expander allows inline editing with regenerate button
+- **Prompt Editing**: Text area in expander allows inline editing with always-visible regenerate button
 - **Localization**: CSS pseudo-elements (`::before`, `::after`) with `font-size: 0` trick preserve upload button while showing Russian text
 - **PDF Fonts**: DejaVuSans and DejaVuSans-Bold fonts registered via `pdfmetrics.registerFont()` for Cyrillic rendering
-- **PDF Markdown Processing**: Custom `clean_markdown()` function removes emojis and processes markdown formatting (bold, headers, lists) using regex
-- **Refinement Layout**: Moved refinement UI from separate section below to inline position in col2 next to design variant images
+- **PDF Emoji Removal**: Uses `emoji.replace_emoji()` library function to strip all emojis from text before rendering
+- **PDF Markdown Processing**: Custom `clean_markdown()` function processes markdown formatting (bold, headers, lists) using regex
+- **Refinement Layout**: Refinement UI always visible inline in col2 next to design variant images (removed `selected_image_idx` logic)
+- **PDF Generation Flow**: Two-step process - first button generates and caches PDF in `session_state.pdf_buffer`, second button (download_button) serves cached file
 - **Database Migration**: Added `shopping_list` column to `recommendations` table with `ALTER TABLE IF NOT EXISTS` for backward compatibility

@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
 from datetime import datetime
+from pdf_generator import generate_design_pdf
 
 load_dotenv()
 init_db()
@@ -485,3 +486,31 @@ if st.session_state.images:
         st.progress(floor_budget / total_budget if total_budget > 0 else 0, text=f"Пол: {floor_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Пол: 0%")
         st.progress(furniture_budget / total_budget if total_budget > 0 else 0, text=f"Мебель: {furniture_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Мебель: 0%")
         st.progress(work_budget / total_budget if total_budget > 0 else 0, text=f"Работы: {work_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Работы: 0%")
+    
+    st.divider()
+    st.header("📄 Экспорт дизайн-проекта")
+    
+    if st.button("📥 Скачать PDF-отчет", key="export_pdf"):
+        with st.spinner("📄 Создаю PDF-отчет..."):
+            try:
+                project_data = {
+                    'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
+                    'room_type': st.session_state.room_type,
+                    'purpose': st.session_state.purpose,
+                    'analysis': st.session_state.analysis,
+                    'variants': st.session_state.images,
+                    'recommendations': st.session_state.saved_recommendations
+                }
+                
+                pdf_buffer = generate_design_pdf(project_data)
+                
+                st.download_button(
+                    label="💾 Сохранить PDF",
+                    data=pdf_buffer,
+                    file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
+                    mime="application/pdf",
+                    key="download_pdf_btn"
+                )
+                st.success("✅ PDF-отчет готов к скачиванию!")
+            except Exception as e:
+                st.error(f"Ошибка при создании PDF: {str(e)}")

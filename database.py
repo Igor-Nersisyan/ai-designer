@@ -6,7 +6,20 @@ import os
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_engine(DATABASE_URL)
+# Add SSL parameters for PostgreSQL connection
+connect_args = {}
+if DATABASE_URL and DATABASE_URL.startswith('postgresql'):
+    connect_args = {
+        "sslmode": "require",
+        "connect_timeout": 10
+    }
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+    pool_pre_ping=True,
+    pool_recycle=300
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -24,6 +37,35 @@ class Project(Base):
     
     design_variants = relationship("DesignVariant", back_populates="project", cascade="all, delete-orphan")
     recommendations = relationship("Recommendation", back_populates="project", cascade="all, delete-orphan")
+
+class DesignVariant(Base):
+    __tablename__ = "design_variants"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    image_url = Column(Text, nullable=False)
+    prompt = Column(Text, nullable=False)
+    iterations = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    project = relationship("Project", back_populates="design_variants")
+
+class Recommendation(Base):
+    __tablename__ = "recommendations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    project = relationship("Project", back_populates="recommendations")
+
+def init_db():
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+        print("The app will continue without database functionality.")
 
 class DesignVariant(Base):
     __tablename__ = "design_variants"

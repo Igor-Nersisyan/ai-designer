@@ -129,7 +129,7 @@ with st.sidebar:
     
     if uploaded_file:
         image = Image.open(uploaded_file)
-        st.image(image, caption="Загруженное фото", width='stretch')
+        st.image(image, caption="Загруженное фото", use_container_width=True)
         st.session_state.uploaded_image_b64 = encode_image(uploaded_file)
     
     purpose = st.text_area(
@@ -289,7 +289,7 @@ if st.session_state.images:
             col1, col2 = st.columns([3, 2])
             
             with col1:
-                st.image(img_data['url'], width='stretch')
+                st.image(img_data['url'], use_container_width=True)
             
             with col2:
                 st.markdown(f"**Вариант {idx + 1}**")
@@ -329,11 +329,11 @@ if st.session_state.images:
             col1, col2 = st.columns(2)
             with col1:
                 st.subheader(f"Вариант {variant1 + 1}")
-                st.image(st.session_state.images[variant1]['url'], width='stretch')
+                st.image(st.session_state.images[variant1]['url'], use_container_width=True)
                 st.caption(f"Итераций: {st.session_state.images[variant1]['iterations']}")
             with col2:
                 st.subheader(f"Вариант {variant2 + 1}")
-                st.image(st.session_state.images[variant2]['url'], width='stretch')
+                st.image(st.session_state.images[variant2]['url'], use_container_width=True)
                 st.caption(f"Итераций: {st.session_state.images[variant2]['iterations']}")
         else:
             st.info("Выберите разные варианты для сравнения")

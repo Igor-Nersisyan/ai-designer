@@ -87,3 +87,17 @@ API authentication uses environment variables loaded via dotenv, keeping sensiti
 3. **Shopping List Generator**: AI-powered material shopping lists with store links
 4. **Budget Calculator**: Interactive renovation cost estimation with category breakdowns
 5. **PDF Export**: Complete design packages with images and recommendations
+
+## UX Improvements (November 15, 2025)
+1. **Auto-load Projects**: Projects now load automatically when selected from dropdown (removed "Load" button)
+2. **Auto-save**: Projects save automatically after analysis, design generation, refinements, and recommendations (removed "Save" button)
+3. **Prompt Editing**: Users can now edit prompts directly in the design variants section and regenerate images
+4. **Russian Localization**: File uploader drag-and-drop interface fully translated to Russian using CSS
+5. **PDF Cyrillic Support**: Fixed black squares in PDF exports by adding DejaVu font support for Russian text
+
+## Technical Implementation
+- **Auto-load**: Uses session state tracking (`last_selected_project`) to detect changes and load automatically
+- **Auto-save**: Function `auto_save_project()` called after all mutation operations, controlled by `auto_save_enabled` flag
+- **Prompt Editing**: Text area in expander allows inline editing with regenerate button
+- **Localization**: CSS pseudo-elements (`::before`, `::after`) override default English text in file uploader
+- **PDF Fonts**: DejaVuSans and DejaVuSans-Bold fonts registered via `pdfmetrics.registerFont()` for Cyrillic rendering

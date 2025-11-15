@@ -10,9 +10,19 @@ from io import BytesIO
 import requests
 from PIL import Image
 import io
+import re
 
 pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
 pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+
+def clean_markdown(text):
+    text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'###\s+', '', text)
+    text = re.sub(r'##\s+', '', text)
+    text = re.sub(r'#\s+', '', text)
+    text = text.replace('\n\n', '<br/><br/>')
+    text = text.replace('\n', '<br/>')
+    return text
 
 def generate_design_pdf(project_data):
     buffer = BytesIO()
@@ -51,7 +61,7 @@ def generate_design_pdf(project_data):
         spaceAfter=12
     )
     
-    story.append(Paragraph("🏠 Дизайн-проект", title_style))
+    story.append(Paragraph("Дизайн-проект", title_style))
     story.append(Paragraph(f"<b>{project_data['name']}</b>", heading_style))
     story.append(Spacer(1, 0.5*cm))
     
@@ -74,12 +84,12 @@ def generate_design_pdf(project_data):
     story.append(info_table)
     story.append(Spacer(1, 1*cm))
     
-    story.append(Paragraph("📊 Анализ помещения", heading_style))
-    analysis_text = project_data['analysis'].replace('\n', '<br/>')
+    story.append(Paragraph("Анализ помещения", heading_style))
+    analysis_text = clean_markdown(project_data['analysis'])
     story.append(Paragraph(analysis_text, body_style))
     story.append(PageBreak())
     
-    story.append(Paragraph("🖼️ Варианты дизайна", heading_style))
+    story.append(Paragraph("Варианты дизайна", heading_style))
     
     for idx, variant in enumerate(project_data['variants'], 1):
         story.append(Spacer(1, 0.5*cm))
@@ -107,8 +117,8 @@ def generate_design_pdf(project_data):
     
     if project_data.get('recommendations'):
         story.append(PageBreak())
-        story.append(Paragraph("📋 Рекомендации по материалам", heading_style))
-        rec_text = project_data['recommendations'].replace('\n', '<br/>')
+        story.append(Paragraph("Рекомендации по материалам", heading_style))
+        rec_text = clean_markdown(project_data['recommendations'])
         story.append(Paragraph(rec_text, body_style))
     
     doc.build(story)

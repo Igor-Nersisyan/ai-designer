@@ -46,6 +46,7 @@ class Recommendation(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"))
     content = Column(Text, nullable=False)
+    shopping_list = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     project = relationship("Project", back_populates="recommendations")

@@ -47,29 +47,29 @@ h1 {
     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     margin-bottom: 1rem;
 }
-[data-testid="stFileUploader"] section button {
-    display: none;
+[data-testid="stFileUploader"] {
+    min-height: auto;
 }
-[data-testid="stFileUploader"] section > div {
-    padding: 2rem;
+[data-testid="stFileUploader"] section {
+    padding: 1.5rem !important;
+    min-height: auto !important;
 }
 [data-testid="stFileUploader"] section small {
-    display: none;
+    font-size: 0 !important;
 }
-[data-testid="stFileUploader"] section::before {
-    content: "Перетащите файл сюда";
-    display: block;
+[data-testid="stFileUploader"] section small::before {
+    content: "Перетащите файл сюда или нажмите для выбора" !important;
+    font-size: 0.9rem !important;
+    display: block !important;
     text-align: center;
-    font-size: 1rem;
-    color: #555;
-    margin-bottom: 0.5rem;
 }
-[data-testid="stFileUploader"] section::after {
-    content: "Максимальный размер файла: 200MB";
-    display: block;
+[data-testid="stFileUploader"] section small::after {
+    content: "Макс. размер: 200MB" !important;
+    font-size: 0.75rem !important;
+    display: block !important;
     text-align: center;
-    font-size: 0.85rem;
     color: #999;
+    margin-top: 0.25rem;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -90,6 +90,8 @@ if 'current_project_id' not in st.session_state:
     st.session_state.current_project_id = None
 if 'saved_recommendations' not in st.session_state:
     st.session_state.saved_recommendations = None
+if 'saved_shopping_list' not in st.session_state:
+    st.session_state.saved_shopping_list = None
 if 'last_selected_project' not in st.session_state:
     st.session_state.last_selected_project = None
 if 'auto_save_enabled' not in st.session_state:
@@ -133,13 +135,18 @@ def auto_save_project():
             )
             db.add(variant)
         
-        if st.session_state.saved_recommendations:
-            db.query(Recommendation).filter(Recommendation.project_id == project.id).delete()
-            rec = Recommendation(
-                project_id=project.id,
-                content=st.session_state.saved_recommendations
-            )
-            db.add(rec)
+        if st.session_state.saved_recommendations or st.session_state.saved_shopping_list:
+            existing_rec = db.query(Recommendation).filter(Recommendation.project_id == project.id).first()
+            if existing_rec:
+                existing_rec.content = st.session_state.saved_recommendations or existing_rec.content
+                existing_rec.shopping_list = st.session_state.saved_shopping_list
+            else:
+                rec = Recommendation(
+                    project_id=project.id,
+                    content=st.session_state.saved_recommendations or "",
+                    shopping_list=st.session_state.saved_shopping_list
+                )
+                db.add(rec)
         
         db.commit()
     except Exception as e:
@@ -189,8 +196,10 @@ with st.sidebar:
                 recommendations = db.query(Recommendation).filter(Recommendation.project_id == project.id).first()
                 if recommendations:
                     st.session_state.saved_recommendations = recommendations.content
+                    st.session_state.saved_shopping_list = recommendations.shopping_list
                 else:
                     st.session_state.saved_recommendations = None
+                    st.session_state.saved_shopping_list = None
                 
                 st.rerun()
             else:
@@ -337,16 +346,17 @@ if st.session_state.images:
                 st.markdown(f"**Вариант {idx + 1}**")
                 st.caption(f"Итераций: {img_data['iterations']}")
                 
-                with st.expander("📝 Промпт для генерации", expanded=False):
+                with st.expander("📝 Редактировать промпт", expanded=False):
                     edited_prompt = st.text_area(
-                        "Промпт (можно редактировать)",
+                        "Промпт",
                         value=img_data['prompt'],
                         height=150,
-                        key=f"prompt_edit_{idx}"
+                        key=f"prompt_edit_{idx}",
+                        label_visibility="collapsed"
                     )
                     
                     if edited_prompt != img_data['prompt']:
-                        if st.button("🔄 Перегенерировать с новым промптом", key=f"regen_{idx}"):
+                        if st.button("🔄 Перегенерировать", key=f"regen_{idx}", use_container_width=True):
                             with st.spinner("🎨 Генерирую новый вариант..."):
                                 try:
                                     new_image_url = generate_image(client, edited_prompt)
@@ -360,12 +370,53 @@ if st.session_state.images:
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Ошибка: {str(e)}")
-                    else:
-                        st.text(img_data['prompt'])
                 
-                if st.button(f"🔧 Доработать этот вариант", key=f"refine_{idx}"):
-                    st.session_state.selected_image_idx = idx
-                    st.rerun()
+                st.divider()
+                
+                if st.session_state.selected_image_idx == idx:
+                    st.markdown("**🔧 Доработка естественным языком**")
+                    feedback = st.text_area(
+                        "Опишите желаемые изменения",
+                        placeholder="Например: сделать стены светлее, добавить больше растений, заменить диван на угловой",
+                        height=100,
+                        key=f"feedback_input_{idx}"
+                    )
+                    
+                    if st.button("🎨 Применить изменения", type="primary", key=f"apply_changes_{idx}", use_container_width=True):
+                        if feedback:
+                            with st.spinner("🎨 Дорабатываю дизайн..."):
+                                try:
+                                    refined_prompt = call_gpt4o(
+                                        client,
+                                        SYSTEM_PROMPT_DALLE_ENGINEER,
+                                        f"""Исходный промпт:
+{img_data['prompt']}
+
+Фидбэк пользователя: {feedback}
+
+Создай НОВЫЙ промпт для DALL-E 3, учитывая фидбэк. Ответь ТОЛЬКО промптом."""
+                                    )
+                                    
+                                    new_image_url = generate_image(client, refined_prompt)
+                                    
+                                    st.session_state.images.append({
+                                        'url': new_image_url,
+                                        'prompt': refined_prompt,
+                                        'iterations': img_data['iterations'] + 1
+                                    })
+                                    
+                                    st.session_state.selected_image_idx = None
+                                    auto_save_project()
+                                    st.success("✅ Новый вариант создан!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Ошибка при доработке дизайна: {str(e)}")
+                        else:
+                            st.warning("Опишите желаемые изменения")
+                else:
+                    if st.button(f"🔧 Доработать естественным языком", key=f"refine_{idx}", use_container_width=True):
+                        st.session_state.selected_image_idx = idx
+                        st.rerun()
             
             st.divider()
     
@@ -402,58 +453,6 @@ if st.session_state.images:
                 st.caption(f"Итераций: {st.session_state.images[variant2]['iterations']}")
         else:
             st.info("Выберите разные варианты для сравнения")
-    
-    if st.session_state.selected_image_idx is not None:
-        idx = st.session_state.selected_image_idx
-        current_img = st.session_state.images[idx]
-        
-        st.subheader(f"🔧 Доработка варианта {idx + 1}")
-        
-        feedback = st.text_area(
-            "Что нужно изменить?",
-            placeholder="Например: сделать стены светлее, добавить больше растений, заменить диван на угловой",
-            height=100,
-            key="feedback_input"
-        )
-        
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            refine_button = st.button("🎨 Применить изменения", type="primary", key="apply_changes")
-        with col2:
-            if st.button("❌ Отменить", key="cancel_refine"):
-                st.session_state.selected_image_idx = None
-                st.rerun()
-        
-        if refine_button and feedback:
-            with st.spinner("🎨 Дорабатываю дизайн..."):
-                try:
-                    refined_prompt = call_gpt4o(
-                        client,
-                        SYSTEM_PROMPT_DALLE_ENGINEER,
-                        f"""Исходный промпт:
-{current_img['prompt']}
-
-Фидбэк пользователя: {feedback}
-
-Создай НОВЫЙ промпт для DALL-E 3, учитывая фидбэк. Ответь ТОЛЬКО промптом."""
-                    )
-                    
-                    new_image_url = generate_image(client, refined_prompt)
-                    
-                    st.session_state.images.append({
-                        'url': new_image_url,
-                        'prompt': refined_prompt,
-                        'iterations': current_img['iterations'] + 1
-                    })
-                    
-                    st.session_state.selected_image_idx = None
-                    
-                    auto_save_project()
-                    st.success("✅ Новый вариант создан!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Ошибка при доработке дизайна: {str(e)}")
-                    st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
     
     st.divider()
     st.header("📋 Финальные рекомендации")
@@ -498,6 +497,9 @@ if st.session_state.images:
     st.divider()
     st.header("🛒 Список покупок")
     
+    if st.session_state.saved_shopping_list:
+        st.markdown(st.session_state.saved_shopping_list)
+    
     if st.button("📝 Создать список покупок", key="generate_shopping_list"):
         with st.spinner("🛒 Создаю список покупок..."):
             try:
@@ -523,6 +525,8 @@ if st.session_state.images:
 
 Создай список покупок."""
                 )
+                st.session_state.saved_shopping_list = shopping_list
+                auto_save_project()
                 st.markdown(shopping_list)
             except Exception as e:
                 st.error(f"Ошибка при создании списка: {str(e)}")

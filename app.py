@@ -501,17 +501,21 @@ if st.session_state.images:
                     """Ты — эксперт по закупкам материалов для ремонта. Создай детальный список покупок с:
 1. Категориями (Отделка стен, Пол, Потолок, Мебель, Освещение, Декор)
 2. Для каждого товара укажи:
-   - Название и описание
+   - Конкретное название товара и артикул (если возможно)
+   - Описание
    - Количество
    - Примерная цена в рублях
-   - Ссылка на магазин (используй реальные магазины: Леруа Мерлен, ИКЕА, Hoff, OBI)
+   - Прямая ссылка на конкретный товар в онлайн-магазине (Леруа Мерлен, ИКЕА, Hoff, OBI, Wildberries, Ozon)
    
+ВАЖНО: Ссылки должны вести на конкретные товары, а не на главную страницу магазина.
+Используй реальные товары из этих магазинов. Если не уверен в точной ссылке, укажи поисковый запрос для магазина.
+
 Формат ответа:
 ### Категория
-1. **Название товара** - описание
+1. **Название товара (артикул)** - описание
    - Количество: X шт/м²/л
    - Цена: ~X руб
-   - Магазин: [Название](https://leroymerlin.ru) или [ИКЕА](https://ikea.ru)""",
+   - [Купить в магазине](прямая ссылка на товар)""",
                     f"""Тип помещения: {st.session_state.room_type}
 Рекомендации:
 {st.session_state.saved_recommendations if st.session_state.saved_recommendations else st.session_state.analysis}
@@ -554,27 +558,26 @@ if st.session_state.images:
     st.divider()
     st.header("📄 Экспорт дизайн-проекта")
     
-    if st.button("📥 Скачать PDF-отчет", key="export_pdf"):
-        with st.spinner("📄 Создаю PDF-отчет..."):
-            try:
-                project_data = {
-                    'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
-                    'room_type': st.session_state.room_type,
-                    'purpose': st.session_state.purpose,
-                    'analysis': st.session_state.analysis,
-                    'variants': st.session_state.images,
-                    'recommendations': st.session_state.saved_recommendations
-                }
-                
-                pdf_buffer = generate_design_pdf(project_data)
-                
-                st.download_button(
-                    label="💾 Сохранить PDF",
-                    data=pdf_buffer,
-                    file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
-                    mime="application/pdf",
-                    key="download_pdf_btn"
-                )
-                st.success("✅ PDF-отчет готов к скачиванию!")
-            except Exception as e:
-                st.error(f"Ошибка при создании PDF: {str(e)}")
+    try:
+        project_data = {
+            'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
+            'room_type': st.session_state.room_type,
+            'purpose': st.session_state.purpose,
+            'analysis': st.session_state.analysis,
+            'variants': st.session_state.images,
+            'recommendations': st.session_state.saved_recommendations,
+            'created_at': datetime.now().strftime('%d.%m.%Y')
+        }
+        
+        pdf_buffer = generate_design_pdf(project_data)
+        
+        st.download_button(
+            label="📥 Скачать PDF-отчет",
+            data=pdf_buffer,
+            file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
+            mime="application/pdf",
+            key="download_pdf_btn",
+            use_container_width=True
+        )
+    except Exception as e:
+        st.error(f"Ошибка при создании PDF: {str(e)}")

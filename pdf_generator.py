@@ -16,6 +16,8 @@ pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/D
 pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
 
 def clean_markdown(text):
+    import emoji
+    text = emoji.replace_emoji(text, replace='')
     text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
     text = re.sub(r'###\s+', '', text)
     text = re.sub(r'##\s+', '', text)
@@ -65,10 +67,13 @@ def generate_design_pdf(project_data):
     story.append(Paragraph(f"<b>{project_data['name']}</b>", heading_style))
     story.append(Spacer(1, 0.5*cm))
     
+    from datetime import datetime
+    created_at = project_data.get('created_at', datetime.now().strftime('%d.%m.%Y'))
+    
     info_data = [
         ['Тип помещения:', project_data['room_type']],
         ['Цель использования:', project_data['purpose']],
-        ['Дата создания:', project_data.get('created_at', 'Не указана')]
+        ['Дата создания:', created_at]
     ]
     info_table = Table(info_data, colWidths=[5*cm, 11*cm])
     info_table.setStyle(TableStyle([
@@ -96,7 +101,7 @@ def generate_design_pdf(project_data):
         story.append(Paragraph(f"<b>Вариант {idx}</b> (Итераций: {variant['iterations']})", heading_style))
         
         try:
-            response = requests.get(variant['image_url'], timeout=10)
+            response = requests.get(variant['url'], timeout=10)
             img_data = BytesIO(response.content)
             pil_img = Image.open(img_data)
             
@@ -110,7 +115,6 @@ def generate_design_pdf(project_data):
             story.append(Paragraph(f"Не удалось загрузить изображение: {str(e)}", body_style))
         
         story.append(Spacer(1, 0.3*cm))
-        story.append(Paragraph(f"<b>Описание:</b> {variant['prompt'][:200]}...", body_style))
         
         if idx < len(project_data['variants']):
             story.append(PageBreak())

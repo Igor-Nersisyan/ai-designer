@@ -92,12 +92,19 @@ API authentication uses environment variables loaded via dotenv, keeping sensiti
 1. **Auto-load Projects**: Projects now load automatically when selected from dropdown (removed "Load" button)
 2. **Auto-save**: Projects save automatically after analysis, design generation, refinements, and recommendations (removed "Save" button)
 3. **Prompt Editing**: Users can now edit prompts directly in the design variants section and regenerate images
-4. **Russian Localization**: File uploader drag-and-drop interface fully translated to Russian using CSS
+4. **Russian Localization**: File uploader fully translated to Russian with both drag-and-drop and click functionality preserved
 5. **PDF Cyrillic Support**: Fixed black squares in PDF exports by adding DejaVu font support for Russian text
+6. **Refinement UI Redesigned**: Refinement options now appear inline next to each design variant instead of separate section
+7. **Shopping List Persistence**: Shopping lists now save independently in database and load correctly with projects
 
 ## Technical Implementation
 - **Auto-load**: Uses session state tracking (`last_selected_project`) to detect changes and load automatically
 - **Auto-save**: Function `auto_save_project()` called after all mutation operations, controlled by `auto_save_enabled` flag
+  - Updated logic: Persists recommendations and shopping lists independently (uses OR condition instead of AND)
+  - Updates existing records or creates new ones to prevent data loss
 - **Prompt Editing**: Text area in expander allows inline editing with regenerate button
-- **Localization**: CSS pseudo-elements (`::before`, `::after`) override default English text in file uploader
+- **Localization**: CSS pseudo-elements (`::before`, `::after`) with `font-size: 0` trick preserve upload button while showing Russian text
 - **PDF Fonts**: DejaVuSans and DejaVuSans-Bold fonts registered via `pdfmetrics.registerFont()` for Cyrillic rendering
+- **PDF Markdown Processing**: Custom `clean_markdown()` function removes emojis and processes markdown formatting (bold, headers, lists) using regex
+- **Refinement Layout**: Moved refinement UI from separate section below to inline position in col2 next to design variant images
+- **Database Migration**: Added `shopping_list` column to `recommendations` table with `ALTER TABLE IF NOT EXISTS` for backward compatibility

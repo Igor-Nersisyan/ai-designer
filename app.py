@@ -7,8 +7,11 @@ from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_DALLE_ENGINEER
 from utils import encode_image, call_gpt4o_vision, call_gpt4o, generate_image
 import os
 from dotenv import load_dotenv
+from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
+from datetime import datetime
 
 load_dotenv()
+init_db()
 
 st.set_page_config(
     page_title="AI-Дизайнер по ремонту",
@@ -58,11 +61,57 @@ if 'room_type' not in st.session_state:
     st.session_state.room_type = None
 if 'purpose' not in st.session_state:
     st.session_state.purpose = ""
+if 'current_project_id' not in st.session_state:
+    st.session_state.current_project_id = None
+if 'saved_recommendations' not in st.session_state:
+    st.session_state.saved_recommendations = None
 
 st.title("🏠 AI-Дизайнер по ремонту")
 st.markdown("Загрузите фото помещения и получите профессиональный дизайн-проект")
 
 with st.sidebar:
+    st.header("📋 Управление проектами")
+    
+    db = SessionLocal()
+    projects = db.query(Project).order_by(Project.updated_at.desc()).all()
+    
+    if projects:
+        project_options = ["Новый проект"] + [f"{p.name} ({p.room_type})" for p in projects]
+        selected_project = st.selectbox(
+            "Выберите проект",
+            project_options,
+            key="project_selector"
+        )
+        
+        if selected_project != "Новый проект":
+            project_idx = project_options.index(selected_project) - 1
+            if st.button("📂 Загрузить проект", key="load_project_btn"):
+                project = projects[project_idx]
+                st.session_state.current_project_id = project.id
+                st.session_state.room_type = project.room_type
+                st.session_state.purpose = project.purpose
+                st.session_state.analysis = project.analysis
+                st.session_state.uploaded_image_b64 = project.uploaded_image_b64
+                
+                variants = db.query(DesignVariant).filter(DesignVariant.project_id == project.id).all()
+                st.session_state.images = [
+                    {
+                        'url': v.image_url,
+                        'prompt': v.prompt,
+                        'iterations': v.iterations
+                    } for v in variants
+                ]
+                
+                recommendations = db.query(Recommendation).filter(Recommendation.project_id == project.id).first()
+                if recommendations:
+                    st.session_state.saved_recommendations = recommendations.content
+                
+                st.success(f"Проект '{project.name}' загружен!")
+                st.rerun()
+    
+    db.close()
+    
+    st.divider()
     st.header("📋 Исходные данные")
     
     room_type = st.selectbox(
@@ -89,6 +138,60 @@ with st.sidebar:
     )
     
     analyze_button = st.button("🔍 Начать анализ", type="primary", disabled=not uploaded_file)
+    
+    st.divider()
+    
+    if st.session_state.analysis:
+        project_name = st.text_input("Название проекта", value=f"Проект {datetime.now().strftime('%d.%m.%Y')}")
+        if st.button("💾 Сохранить проект", key="save_project_btn"):
+            db = SessionLocal()
+            try:
+                if st.session_state.current_project_id:
+                    project = db.query(Project).filter(Project.id == st.session_state.current_project_id).first()
+                    project.name = project_name
+                    project.room_type = st.session_state.room_type
+                    project.purpose = st.session_state.purpose
+                    project.analysis = st.session_state.analysis
+                    project.uploaded_image_b64 = st.session_state.uploaded_image_b64
+                    project.updated_at = datetime.utcnow()
+                    
+                    db.query(DesignVariant).filter(DesignVariant.project_id == project.id).delete()
+                else:
+                    project = Project(
+                        name=project_name,
+                        room_type=st.session_state.room_type,
+                        purpose=st.session_state.purpose,
+                        analysis=st.session_state.analysis,
+                        uploaded_image_b64=st.session_state.uploaded_image_b64
+                    )
+                    db.add(project)
+                    db.flush()
+                    st.session_state.current_project_id = project.id
+                
+                for img_data in st.session_state.images:
+                    variant = DesignVariant(
+                        project_id=project.id,
+                        image_url=img_data['url'],
+                        prompt=img_data['prompt'],
+                        iterations=img_data['iterations']
+                    )
+                    db.add(variant)
+                
+                if st.session_state.saved_recommendations:
+                    db.query(Recommendation).filter(Recommendation.project_id == project.id).delete()
+                    rec = Recommendation(
+                        project_id=project.id,
+                        content=st.session_state.saved_recommendations
+                    )
+                    db.add(rec)
+                
+                db.commit()
+                st.success(f"Проект '{project_name}' сохранен!")
+            except Exception as e:
+                db.rollback()
+                st.error(f"Ошибка при сохранении: {str(e)}")
+            finally:
+                db.close()
     
     st.divider()
     
@@ -254,6 +357,9 @@ if st.session_state.images:
     st.divider()
     st.header("📋 Финальные рекомендации")
     
+    if st.session_state.saved_recommendations:
+        st.markdown(st.session_state.saved_recommendations)
+    
     if st.button("📝 Получить детальные рекомендации по материалам", key="get_recommendations"):
         with st.spinner("📝 Формирую рекомендации..."):
             try:
@@ -281,6 +387,7 @@ if st.session_state.images:
 Дай детальные рекомендации."""
                 )
                 
+                st.session_state.saved_recommendations = recommendations
                 st.markdown(recommendations)
             except Exception as e:
                 st.error(f"Ошибка при формировании рекомендаций: {str(e)}")

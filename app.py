@@ -303,6 +303,40 @@ if st.session_state.images:
             
             st.divider()
     
+    if len(st.session_state.images) >= 2:
+        st.divider()
+        st.header("🔄 Сравнение вариантов")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            variant1 = st.selectbox(
+                "Вариант 1",
+                range(len(st.session_state.images)),
+                format_func=lambda x: f"Вариант {x + 1}",
+                key="compare_variant1"
+            )
+        with col2:
+            variant2 = st.selectbox(
+                "Вариант 2",
+                range(len(st.session_state.images)),
+                index=min(1, len(st.session_state.images) - 1),
+                format_func=lambda x: f"Вариант {x + 1}",
+                key="compare_variant2"
+            )
+        
+        if variant1 != variant2:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader(f"Вариант {variant1 + 1}")
+                st.image(st.session_state.images[variant1]['url'], use_container_width=True)
+                st.caption(f"Итераций: {st.session_state.images[variant1]['iterations']}")
+            with col2:
+                st.subheader(f"Вариант {variant2 + 1}")
+                st.image(st.session_state.images[variant2]['url'], use_container_width=True)
+                st.caption(f"Итераций: {st.session_state.images[variant2]['iterations']}")
+        else:
+            st.info("Выберите разные варианты для сравнения")
+    
     if st.session_state.selected_image_idx is not None:
         idx = st.session_state.selected_image_idx
         current_img = st.session_state.images[idx]

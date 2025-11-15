@@ -355,68 +355,61 @@ if st.session_state.images:
                         label_visibility="collapsed"
                     )
                     
-                    if edited_prompt != img_data['prompt']:
-                        if st.button("🔄 Перегенерировать", key=f"regen_{idx}", use_container_width=True):
-                            with st.spinner("🎨 Генерирую новый вариант..."):
-                                try:
-                                    new_image_url = generate_image(client, edited_prompt)
-                                    st.session_state.images.append({
-                                        'url': new_image_url,
-                                        'prompt': edited_prompt,
-                                        'iterations': img_data['iterations'] + 1
-                                    })
-                                    auto_save_project()
-                                    st.success("✅ Новый вариант создан!")
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Ошибка: {str(e)}")
+                    if st.button("🔄 Перегенерировать", key=f"regen_{idx}", use_container_width=True):
+                        with st.spinner("🎨 Генерирую новый вариант..."):
+                            try:
+                                new_image_url = generate_image(client, edited_prompt)
+                                st.session_state.images.append({
+                                    'url': new_image_url,
+                                    'prompt': edited_prompt,
+                                    'iterations': img_data['iterations'] + 1
+                                })
+                                auto_save_project()
+                                st.success("✅ Новый вариант создан!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Ошибка: {str(e)}")
                 
                 st.divider()
                 
-                if st.session_state.selected_image_idx == idx:
-                    st.markdown("**🔧 Доработка естественным языком**")
-                    feedback = st.text_area(
-                        "Опишите желаемые изменения",
-                        placeholder="Например: сделать стены светлее, добавить больше растений, заменить диван на угловой",
-                        height=100,
-                        key=f"feedback_input_{idx}"
-                    )
-                    
-                    if st.button("🎨 Применить изменения", type="primary", key=f"apply_changes_{idx}", use_container_width=True):
-                        if feedback:
-                            with st.spinner("🎨 Дорабатываю дизайн..."):
-                                try:
-                                    refined_prompt = call_gpt4o(
-                                        client,
-                                        SYSTEM_PROMPT_DALLE_ENGINEER,
-                                        f"""Исходный промпт:
+                st.markdown("**🔧 Доработка естественным языком**")
+                feedback = st.text_area(
+                    "Опишите желаемые изменения",
+                    placeholder="Например: сделать стены светлее, добавить больше растений, заменить диван на угловой",
+                    height=100,
+                    key=f"feedback_input_{idx}"
+                )
+                
+                if st.button("🎨 Применить изменения", type="primary", key=f"apply_changes_{idx}", use_container_width=True):
+                    if feedback:
+                        with st.spinner("🎨 Дорабатываю дизайн..."):
+                            try:
+                                refined_prompt = call_gpt4o(
+                                    client,
+                                    SYSTEM_PROMPT_DALLE_ENGINEER,
+                                    f"""Исходный промпт:
 {img_data['prompt']}
 
 Фидбэк пользователя: {feedback}
 
 Создай НОВЫЙ промпт для DALL-E 3, учитывая фидбэк. Ответь ТОЛЬКО промптом."""
-                                    )
-                                    
-                                    new_image_url = generate_image(client, refined_prompt)
-                                    
-                                    st.session_state.images.append({
-                                        'url': new_image_url,
-                                        'prompt': refined_prompt,
-                                        'iterations': img_data['iterations'] + 1
-                                    })
-                                    
-                                    st.session_state.selected_image_idx = None
-                                    auto_save_project()
-                                    st.success("✅ Новый вариант создан!")
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Ошибка при доработке дизайна: {str(e)}")
-                        else:
-                            st.warning("Опишите желаемые изменения")
-                else:
-                    if st.button(f"🔧 Доработать естественным языком", key=f"refine_{idx}", use_container_width=True):
-                        st.session_state.selected_image_idx = idx
-                        st.rerun()
+                                )
+                                
+                                new_image_url = generate_image(client, refined_prompt)
+                                
+                                st.session_state.images.append({
+                                    'url': new_image_url,
+                                    'prompt': refined_prompt,
+                                    'iterations': img_data['iterations'] + 1
+                                })
+                                
+                                auto_save_project()
+                                st.success("✅ Новый вариант создан!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Ошибка при доработке дизайна: {str(e)}")
+                    else:
+                        st.warning("Опишите желаемые изменения")
             
             st.divider()
     

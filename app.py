@@ -124,7 +124,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader(
         "Загрузите фото помещения",
         type=["jpg", "jpeg", "png"],
-        help="Четкое, хорошо освещенное фото"
+        help="Перетащите файл сюда или нажмите для выбора. Четкое, хорошо освещенное фото"
     )
     
     if uploaded_file:

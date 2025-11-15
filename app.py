@@ -426,3 +426,62 @@ if st.session_state.images:
             except Exception as e:
                 st.error(f"Ошибка при формировании рекомендаций: {str(e)}")
                 st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
+    
+    st.divider()
+    st.header("🛒 Список покупок")
+    
+    if st.button("📝 Создать список покупок", key="generate_shopping_list"):
+        with st.spinner("🛒 Создаю список покупок..."):
+            try:
+                shopping_list = call_gpt4o(
+                    client,
+                    """Ты — эксперт по закупкам материалов для ремонта. Создай детальный список покупок с:
+1. Категориями (Отделка стен, Пол, Потолок, Мебель, Освещение, Декор)
+2. Для каждого товара укажи:
+   - Название и описание
+   - Количество
+   - Примерная цена в рублях
+   - Ссылка на магазин (используй реальные магазины: Леруа Мерлен, ИКЕА, Hoff, OBI)
+   
+Формат ответа:
+### Категория
+1. **Название товара** - описание
+   - Количество: X шт/м²/л
+   - Цена: ~X руб
+   - Магазин: [Название](https://leroymerlin.ru) или [ИКЕА](https://ikea.ru)""",
+                    f"""Тип помещения: {st.session_state.room_type}
+Рекомендации:
+{st.session_state.saved_recommendations if st.session_state.saved_recommendations else st.session_state.analysis}
+
+Создай список покупок."""
+                )
+                st.markdown(shopping_list)
+            except Exception as e:
+                st.error(f"Ошибка при создании списка: {str(e)}")
+    
+    st.divider()
+    st.header("💰 Калькулятор бюджета")
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown("### Основные категории расходов")
+        
+        walls_budget = st.number_input("Отделка стен (руб)", min_value=0, value=50000, step=5000, key="budget_walls")
+        floor_budget = st.number_input("Напольное покрытие (руб)", min_value=0, value=40000, step=5000, key="budget_floor")
+        ceiling_budget = st.number_input("Потолок (руб)", min_value=0, value=30000, step=5000, key="budget_ceiling")
+        furniture_budget = st.number_input("Мебель (руб)", min_value=0, value=100000, step=10000, key="budget_furniture")
+        lighting_budget = st.number_input("Освещение (руб)", min_value=0, value=20000, step=5000, key="budget_lighting")
+        decor_budget = st.number_input("Декор (руб)", min_value=0, value=15000, step=5000, key="budget_decor")
+        work_budget = st.number_input("Работы (руб)", min_value=0, value=80000, step=10000, key="budget_work")
+    
+    with col2:
+        st.markdown("### Итоговый бюджет")
+        total_budget = walls_budget + floor_budget + ceiling_budget + furniture_budget + lighting_budget + decor_budget + work_budget
+        st.metric("Общая сумма", f"{total_budget:,.0f} руб")
+        st.metric("С запасом (+ 15%)", f"{total_budget * 1.15:,.0f} руб")
+        
+        st.markdown("### Распределение по категориям")
+        st.progress(walls_budget / total_budget if total_budget > 0 else 0, text=f"Стены: {walls_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Стены: 0%")
+        st.progress(floor_budget / total_budget if total_budget > 0 else 0, text=f"Пол: {floor_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Пол: 0%")
+        st.progress(furniture_budget / total_budget if total_budget > 0 else 0, text=f"Мебель: {furniture_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Мебель: 0%")
+        st.progress(work_budget / total_budget if total_budget > 0 else 0, text=f"Работы: {work_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Работы: 0%")

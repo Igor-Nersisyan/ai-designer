@@ -1,0 +1,514 @@
+# ТЗ для Replit Agent: AI-Дизайнер по ремонту
+
+## Технический стек
+- **Framework**: Streamlit (Python 3.11)
+- **LLM**: OpenAI GPT-4o (model="gpt-4o")
+- **Image Generation**: DALL-E 3
+- **State Management**: st.session_state
+- **Dependencies**: 
+```
+  streamlit==1.32.0
+  openai==1.12.0
+  pillow==10.2.0
+  python-dotenv==1.0.1
+```
+
+## Структура проекта
+```
+main.py          # главный файл приложения
+prompts.py       # все промпты в константах
+utils.py         # вспомогательные функции (конвертация base64, API calls)
+.env             # OPENAI_API_KEY
+requirements.txt
+```
+
+## main.py - Полная структура интерфейса
+
+### Imports и configuration
+```python
+import streamlit as st
+import base64
+from openai import OpenAI
+from PIL import Image
+import io
+from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_DALLE_ENGINEER
+from utils import encode_image, call_gpt4o_vision, call_gpt4o, generate_image
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+st.set_page_config(
+    page_title="AI-Дизайнер по ремонту",
+    page_icon="🏠",
+    layout="wide"
+)
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+```
+
+### CSS стили
+```python
+st.markdown("""
+<style>
+.stButton>button {
+    width: 100%;
+    border-radius: 8px;
+    height: 3em;
+    font-weight: 600;
+}
+.main .block-container {
+    max-width: 1400px;
+    padding: 2rem;
+}
+h1 {
+    color: #1f1f1f;
+    margin-bottom: 2rem;
+}
+.uploaded-image {
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.generated-image {
+    border-radius: 12px;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    margin-bottom: 1rem;
+}
+</style>
+""", unsafe_allow_html=True)
+```
+
+### Session State инициализация
+```python
+if 'analysis' not in st.session_state:
+    st.session_state.analysis = None
+if 'images' not in st.session_state:
+    st.session_state.images = []  # [{'url': str, 'prompt': str, 'iterations': int}]
+if 'selected_image_idx' not in st.session_state:
+    st.session_state.selected_image_idx = None
+if 'uploaded_image_b64' not in st.session_state:
+    st.session_state.uploaded_image_b64 = None
+if 'room_type' not in st.session_state:
+    st.session_state.room_type = None
+if 'purpose' not in st.session_state:
+    st.session_state.purpose = ""
+```
+
+### Header
+```python
+st.title("🏠 AI-Дизайнер по ремонту")
+st.markdown("Загрузите фото помещения и получите профессиональный дизайн-проект")
+```
+
+### Sidebar - Этап 1: Сбор данных
+```python
+with st.sidebar:
+    st.header("📋 Исходные данные")
+    
+    room_type = st.selectbox(
+        "Тип помещения",
+        ["Комната", "Кухня", "Ванная", "Гостиная", "Спальня", "Детская", "Кабинет", "Прихожая"],
+        key="room_type_select"
+    )
+    
+    uploaded_file = st.file_uploader(
+        "Загрузите фото помещения",
+        type=["jpg", "jpeg", "png"],
+        help="Четкое, хорошо освещенное фото"
+    )
+    
+    if uploaded_file:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Загруженное фото", use_container_width=True)
+        st.session_state.uploaded_image_b64 = encode_image(uploaded_file)
+    
+    purpose = st.text_area(
+        "Цель использования помещения",
+        placeholder="Например: хочу уютное место для работы из дома с хорошим освещением",
+        height=100
+    )
+    
+    analyze_button = st.button("🔍 Начать анализ", type="primary", disabled=not uploaded_file)
+    
+    st.divider()
+    
+    if st.button("🔄 Начать заново"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+```
+
+### Main Area - Этап 2: Анализ
+```python
+if analyze_button and uploaded_file:
+    st.session_state.room_type = room_type
+    st.session_state.purpose = purpose
+    
+    with st.spinner("🔍 Анализирую помещение..."):
+        analysis = call_gpt4o_vision(
+            client,
+            SYSTEM_PROMPT_ANALYZER,
+            f"Тип помещения: {room_type}\nЦель использования: {purpose}",
+            st.session_state.uploaded_image_b64
+        )
+        st.session_state.analysis = analysis
+
+if st.session_state.analysis:
+    st.header("📊 Анализ вашего помещения")
+    st.markdown(st.session_state.analysis)
+    
+    st.divider()
+```
+
+### Main Area - Этап 3: Стилевые предпочтения и генерация
+```python
+    st.header("🎨 Создание дизайн-проекта")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        styles = st.multiselect(
+            "Выберите стили (можно несколько)",
+            ["Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прованс"],
+            default=["Скандинавский"]
+        )
+    
+    with col2:
+        main_color = st.color_picker("Основной цвет", "#FFFFFF")
+    
+    additional_preferences = st.text_input(
+        "Дополнительные пожелания (опционально)",
+        placeholder="Например: больше зелени, деревянные акценты"
+    )
+    
+    generate_button = st.button("✨ Создать дизайн-проект", type="primary")
+    
+    if generate_button:
+        if not styles:
+            st.error("Выберите хотя бы один стиль")
+        else:
+            with st.spinner("🎨 Создаю дизайн-проект..."):
+                # Генерируем промпт для DALL-E
+                dalle_prompt = call_gpt4o(
+                    client,
+                    SYSTEM_PROMPT_DALLE_ENGINEER,
+                    f"""Анализ помещения:
+{st.session_state.analysis}
+
+Тип помещения: {st.session_state.room_type}
+Цель: {st.session_state.purpose}
+Стили: {', '.join(styles)}
+Основной цвет: {main_color}
+Дополнительно: {additional_preferences}
+
+Создай детальный промпт для DALL-E 3."""
+                )
+                
+                # Генерируем изображение
+                image_url = generate_image(client, dalle_prompt)
+                
+                st.session_state.images.append({
+                    'url': image_url,
+                    'prompt': dalle_prompt,
+                    'iterations': 0
+                })
+                
+            st.success("✅ Дизайн-проект создан!")
+            st.rerun()
+```
+
+### Main Area - Этап 4 и 5: Галерея и доработка
+```python
+if st.session_state.images:
+    st.divider()
+    st.header("🖼️ Варианты дизайна")
+    
+    # Показываем все сгенерированные варианты
+    for idx, img_data in enumerate(st.session_state.images):
+        with st.container():
+            col1, col2 = st.columns([3, 2])
+            
+            with col1:
+                st.image(img_data['url'], use_container_width=True)
+            
+            with col2:
+                st.markdown(f"**Вариант {idx + 1}**")
+                st.caption(f"Итераций: {img_data['iterations']}")
+                
+                with st.expander("📝 Промпт для генерации"):
+                    st.text(img_data['prompt'])
+                
+                if st.button(f"🔧 Доработать этот вариант", key=f"refine_{idx}"):
+                    st.session_state.selected_image_idx = idx
+                    st.rerun()
+            
+            st.divider()
+    
+    # Форма доработки выбранного варианта
+    if st.session_state.selected_image_idx is not None:
+        idx = st.session_state.selected_image_idx
+        current_img = st.session_state.images[idx]
+        
+        st.subheader(f"🔧 Доработка варианта {idx + 1}")
+        
+        feedback = st.text_area(
+            "Что нужно изменить?",
+            placeholder="Например: сделать стены светлее, добавить больше растений, заменить диван на угловой",
+            height=100,
+            key="feedback_input"
+        )
+        
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            refine_button = st.button("🎨 Применить изменения", type="primary")
+        with col2:
+            if st.button("❌ Отменить"):
+                st.session_state.selected_image_idx = None
+                st.rerun()
+        
+        if refine_button and feedback:
+            with st.spinner("🎨 Дорабатываю дизайн..."):
+                # Модифицируем промпт
+                refined_prompt = call_gpt4o(
+                    client,
+                    SYSTEM_PROMPT_DALLE_ENGINEER,
+                    f"""Исходный промпт:
+{current_img['prompt']}
+
+Фидбэк пользователя: {feedback}
+
+Создай НОВЫЙ промпт для DALL-E 3, учитывая фидбэк. Ответь ТОЛЬКО промптом."""
+                )
+                
+                # Генерируем новое изображение
+                new_image_url = generate_image(client, refined_prompt)
+                
+                # Добавляем как новый вариант
+                st.session_state.images.append({
+                    'url': new_image_url,
+                    'prompt': refined_prompt,
+                    'iterations': current_img['iterations'] + 1
+                })
+                
+                st.session_state.selected_image_idx = None
+                
+            st.success("✅ Новый вариант создан!")
+            st.rerun()
+```
+
+### Main Area - Этап 6: Финальные рекомендации
+```python
+    st.divider()
+    st.header("📋 Финальные рекомендации")
+    
+    if st.button("📝 Получить детальные рекомендации по материалам"):
+        with st.spinner("📝 Формирую рекомендации..."):
+            recommendations = call_gpt4o(
+                client,
+                """Ты — эксперт по дизайну интерьеров и материалам отделки. 
+На основе анализа и выбранного дизайна дай детальные рекомендации по:
+1. Отделке стен (материалы, цвета, текстуры)
+2. Напольному покрытию (тип, цвет, характеристики)
+3. Потолку (отделка, освещение)
+4. Мебели (конкретные рекомендации с размерами)
+5. Освещению (типы светильников, расположение)
+6. Декору и аксессуарам
+
+Будь конкретным: указывай бренды, артикулы, примерные цены (в рублях).""",
+                f"""Тип помещения: {st.session_state.room_type}
+Цель: {st.session_state.purpose}
+
+Анализ:
+{st.session_state.analysis}
+
+Итоговый дизайн (промпт последнего варианта):
+{st.session_state.images[-1]['prompt']}
+
+Дай детальные рекомендации."""
+            )
+            
+        st.markdown(recommendations)
+```
+
+## prompts.py - Все промпты
+```python
+SYSTEM_PROMPT_ANALYZER = """Ты — эксперт по дизайну интерьеров с 15-летним опытом. Проанализируй фото помещения.
+
+Структура ответа:
+
+## 🔍 АУДИТ ПОМЕЩЕНИЯ
+
+**Планировка и зонирование:**
+[3-4 предложения о текущей планировке, распределении пространства]
+
+**Состояние отделки:**
+[Оценка стен, пола, потолка, окон - что в хорошем состоянии, что требует замены]
+
+**Освещение:**
+[Естественное и искусственное освещение, достаточность, расположение источников]
+
+**Функциональность:**
+[Как помещение используется сейчас, удобство, эргономика]
+
+## ⚠️ ПРОБЛЕМЫ
+
+1. [Конкретная проблема]
+2. [Конкретная проблема]
+3. [Конкретная проблема]
+
+## ✨ ПОТЕНЦИАЛ
+
+1. [Что можно использовать как преимущество]
+2. [Скрытые возможности пространства]
+3. [Сильные стороны помещения]
+
+## 💡 РЕКОМЕНДАЦИИ
+
+**Зонирование:**
+[Конкретные предложения по организации пространства]
+
+**Освещение:**
+[Что добавить/изменить с точками размещения]
+
+**Цветовая гамма:**
+[Какие цвета использовать и почему, учитывая освещение и размер]
+
+**Приоритетные изменения:**
+[3-4 самых важных действия в порядке приоритета]
+
+Пиши конкретно, без воды. Используй профессиональную терминологию."""
+
+SYSTEM_PROMPT_DALLE_ENGINEER = """Ты — эксперт по созданию промптов для DALL-E 3 специально для фотореалистичных интерьеров.
+
+ОБЯЗАТЕЛЬНАЯ СТРУКТУРА ПРОМПТА:
+
+1. **Тип изображения:** "Photorealistic interior design photograph"
+2. **Помещение и стиль:** [тип помещения] + [стиль(и)]
+3. **Архитектура:** [планировка, высота потолков, окна]
+4. **Отделка:**
+   - Стены: [материал, цвет, текстура]
+   - Пол: [материал, цвет, паттерн]
+   - Потолок: [отделка, детали]
+5. **Мебель:** [3-5 ключевых предметов с описанием материала и цвета]
+6. **Освещение:**
+   - Естественное: [окна, время суток]
+   - Искусственное: [типы светильников, настроение]
+7. **Цветовая палитра:** [основной + 2-3 акцентных цвета]
+8. **Декор и детали:** [растения, текстиль, аксессуары - 3-4 элемента]
+9. **Атмосфера:** [настроение, стиль фотографии]
+10. **Технические детали:** "professional architectural photography, high resolution, sharp focus"
+
+ТРЕБОВАНИЯ:
+- Длина: 150-200 слов
+- Язык: ТОЛЬКО английский
+- Стиль: детальный и точный
+- НЕ используй абстрактные термины
+- Указывай конкретные материалы, цвета, типы мебели
+- Обязательно опиши освещение детально
+
+ПРИМЕР КАЧЕСТВЕННОГО ПРОМПТА:
+"Photorealistic interior design photograph of a Scandinavian minimalist living room, 35 square meters with 3-meter high white ceilings. Large panoramic window with sheer linen curtains in warm beige, natural daylight creating soft shadows. Light oak engineered wooden flooring with matte finish. Walls painted in warm white (ivory undertone) with smooth texture. Modern low-profile sofa in light gray boucle fabric with wooden legs, positioned against the main wall. Round walnut coffee table with brass legs, 90cm diameter. Black metal floor lamp with adjustable arm. Floating oak shelving unit displaying ceramic vases and books. Two large fiddle leaf fig plants in white ceramic planters. Handwoven jute area rug in natural beige. Soft ambient lighting from hidden LED strips along the ceiling perimeter, creating warm 2700K glow. Cozy and serene atmosphere, professional interior photography, shot with wide-angle lens, natural color grading, high resolution, sharp details."
+
+Твоя задача: на основе данных пользователя создать промпт ТОЧНО по этой структуре.
+Ответь ТОЛЬКО промптом на английском, без пояснений и вступлений."""
+```
+
+## utils.py - Вспомогательные функции
+```python
+import base64
+from openai import OpenAI
+
+def encode_image(uploaded_file):
+    """Конвертирует загруженный файл в base64"""
+    return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
+
+def call_gpt4o_vision(client: OpenAI, system_prompt: str, user_text: str, image_base64: str) -> str:
+    """Вызов GPT-4o Vision для анализа изображения"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": user_text},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=2000,
+            temperature=0.7
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        raise Exception(f"Ошибка GPT-4o Vision: {str(e)}")
+
+def call_gpt4o(client: OpenAI, system_prompt: str, user_prompt: str) -> str:
+    """Обычный вызов GPT-4o для текста"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            max_tokens=2000,
+            temperature=0.7
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        raise Exception(f"Ошибка GPT-4o: {str(e)}")
+
+def generate_image(client: OpenAI, prompt: str) -> str:
+    """Генерация изображения через DALL-E 3"""
+    try:
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1792",  # вертикальный формат для помещений
+            quality="hd",       # высокое качество для деталей
+            n=1
+        )
+        return response.data[0].url
+    except Exception as e:
+        raise Exception(f"Ошибка DALL-E 3: {str(e)}")
+```
+
+## .env
+```
+OPENAI_API_KEY=your_api_key_here
+```
+
+## requirements.txt
+```
+streamlit==1.32.0
+openai==1.12.0
+pillow==10.2.0
+python-dotenv==1.0.1
+```
+
+---
+
+## КРИТИЧЕСКИ ВАЖНО ДЛЯ REPLIT AGENT:
+
+1. **НЕ ДОБАВЛЯЙ** функционал, не описанный в ТЗ
+2. **ИСПОЛЬЗУЙ ТОЧНО** указанные версии библиотек
+3. **СОЗДАЙ ИМЕННО** 4 файла: main.py, prompts.py, utils.py, requirements.txt
+4. **ВСЕ ПРОМПТЫ** должны быть в prompts.py как константы
+5. **ВСЕ API-вызовы** должны быть в utils.py
+6. **ОБРАБОТКА ОШИБОК** через try-except в каждой функции utils.py
+7. **Session state** инициализируется в начале main.py
+8. **НЕ используй** никакие дополнительные библиотеки кроме указанных
+9. **.env файл** должен содержать ТОЛЬКО OPENAI_API_KEY
+10. **Все кнопки** должны иметь unique keys через параметр key=
+
+## Команда для запуска:
+```bash
+streamlit run main.py
+```

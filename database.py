@@ -52,7 +52,11 @@ class Recommendation(Base):
     project = relationship("Project", back_populates="recommendations")
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Warning: Database initialization error: {e}")
+        print("Application will continue, but database features may not work.")
 
 def get_db():
     db = SessionLocal()

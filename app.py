@@ -12,7 +12,11 @@ from datetime import datetime
 from pdf_generator import generate_design_pdf
 
 load_dotenv()
-init_db()
+
+try:
+    init_db()
+except Exception as e:
+    st.warning(f"⚠️ База данных недоступна: {str(e)}. Функции сохранения проектов могут не работать.")
 
 st.set_page_config(
     page_title="AI-Дизайнер по ремонту",

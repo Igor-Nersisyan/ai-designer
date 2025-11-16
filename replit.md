@@ -79,15 +79,32 @@ API authentication uses environment variables loaded via dotenv, keeping sensiti
 - `OPENAI_API_KEY`: OpenAI API authentication
 - `DATABASE_URL`: PostgreSQL connection string (auto-configured by Replit)
 
-# Recent Changes (November 15, 2025)
+# Recent Changes
+
+## November 16, 2025
+1. **Variant Selection Redesign**: Each design variant now has a "Выбрать этот дизайн" button positioned next to the image
+2. **Removed Separate Selection Section**: Deleted the standalone selectbox section for variant selection - selection now happens inline
+3. **Gated Recommendations Flow**: Recommendations, shopping list, budget calculator, and PDF export only appear after selecting a design variant
+4. **Shopping List Cleanup**: Removed URL generation from shopping list prompt (links were non-functional)
+5. **PDF Layout Improvements**:
+   - Removed page number from first page using blank_page callbacks
+   - Title and design photo now appear together on first page (no PageBreak between them)
+   - Analysis section properly restored on second page
+   - Recommendations on third page (when present)
+6. **State Management Fixes**:
+   - `selected_variant_idx` properly cleared when loading projects or starting new projects
+   - Added bounds checking to prevent IndexError when projects have different variant counts
+   - Recommendations only cleared when switching to a different variant (not on first selection)
+
+## November 15, 2025
 
 ## Phase 2 Features Implemented
 1. **Project Persistence**: Full save/load functionality with PostgreSQL database
 2. **Design Comparison**: Side-by-side variant comparison view
-3. **Shopping List Generator**: AI-powered material shopping lists with store links
+3. **Shopping List Generator**: AI-powered material shopping lists without URLs
 4. **Budget Calculator**: Interactive renovation cost estimation with category breakdowns
 5. **PDF Export**: Complete design packages with images and recommendations
-6. **Multi-User Support**: Simple username-based authentication for project separation (November 16, 2025)
+6. **Multi-User Support**: Simple username-based authentication for project separation
 
 ## UX Improvements (November 15, 2025)
 1. **Auto-load Projects**: Projects now load automatically when selected from dropdown (removed "Load" button)

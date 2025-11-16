@@ -259,6 +259,47 @@ with st.sidebar:
     
     db.close()
     
+    if st.session_state.current_project_id:
+        st.divider()
+        st.markdown("### 🗑️ Удаление проекта")
+        
+        if st.button("🗑️ Удалить текущий проект", type="secondary", key="delete_project_btn"):
+            st.session_state.confirm_delete = True
+        
+        if st.session_state.get('confirm_delete', False):
+            st.warning("⚠️ Вы уверены? Это действие нельзя отменить!")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("✅ Да, удалить", type="primary", key="confirm_delete_yes"):
+                    db = SessionLocal()
+                    try:
+                        project = db.query(Project).filter(
+                            Project.id == st.session_state.current_project_id,
+                            Project.user_id == st.session_state.user_id
+                        ).first()
+                        if project:
+                            db.delete(project)
+                            db.commit()
+                            st.success("✅ Проект удален")
+                            for key in ['current_project_id', 'room_type', 'purpose', 'analysis', 
+                                       'uploaded_image_b64', 'images', 'saved_recommendations', 
+                                       'saved_shopping_list', 'confirm_delete', 'auto_save_enabled']:
+                                if key in st.session_state:
+                                    if key == 'images':
+                                        st.session_state[key] = []
+                                    else:
+                                        st.session_state[key] = None
+                            st.rerun()
+                    except Exception as e:
+                        db.rollback()
+                        st.error(f"Ошибка при удалении: {str(e)}")
+                    finally:
+                        db.close()
+            with col2:
+                if st.button("❌ Отмена", key="confirm_delete_no"):
+                    st.session_state.confirm_delete = False
+                    st.rerun()
+    
     st.divider()
     st.header("📋 Исходные данные")
     

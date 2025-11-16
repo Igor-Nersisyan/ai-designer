@@ -178,12 +178,14 @@ if not st.session_state.user_id:
     with col2:
         st.write("")
         st.write("")
-        if st.button("Войти", type="primary", disabled=not username_input):
-            st.session_state.user_id = username_input.lower().replace(" ", "_")
-            st.session_state.username = username_input
-            st.rerun()
+        if st.button("Войти", type="primary"):
+            if username_input:
+                st.session_state.user_id = username_input.lower().replace(" ", "_")
+                st.session_state.username = username_input
+                st.rerun()
+            else:
+                st.error("Введите имя для входа")
     
-    st.info("💡 Ваше имя используется для разделения проектов между пользователями. Каждый пользователь видит только свои проекты.")
     st.stop()
 
 col1, col2 = st.columns([5, 1])
@@ -261,7 +263,6 @@ with st.sidebar:
     
     if st.session_state.current_project_id:
         st.divider()
-        st.markdown("### 🗑️ Удаление проекта")
         
         if st.button("🗑️ Удалить текущий проект", type="secondary", key="delete_project_btn"):
             st.session_state.confirm_delete = True
@@ -331,8 +332,12 @@ with st.sidebar:
     st.divider()
     
     if st.button("🔄 Начать заново"):
+        user_id = st.session_state.get('user_id')
+        username = st.session_state.get('username')
         for key in list(st.session_state.keys()):
             del st.session_state[key]
+        st.session_state.user_id = user_id
+        st.session_state.username = username
         st.rerun()
 
 if analyze_button and uploaded_file:
@@ -499,42 +504,25 @@ if st.session_state.images:
             
             st.divider()
     
-    if len(st.session_state.images) >= 2:
-        st.divider()
-        st.header("🔄 Сравнение вариантов")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            variant1 = st.selectbox(
-                "Вариант 1",
-                range(len(st.session_state.images)),
-                format_func=lambda x: f"Вариант {x + 1}",
-                key="compare_variant1"
-            )
-        with col2:
-            variant2 = st.selectbox(
-                "Вариант 2",
-                range(len(st.session_state.images)),
-                index=min(1, len(st.session_state.images) - 1),
-                format_func=lambda x: f"Вариант {x + 1}",
-                key="compare_variant2"
-            )
-        
-        if variant1 != variant2:
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader(f"Вариант {variant1 + 1}")
-                st.image(st.session_state.images[variant1]['url'], use_container_width=True)
-                st.caption(f"Итераций: {st.session_state.images[variant1]['iterations']}")
-            with col2:
-                st.subheader(f"Вариант {variant2 + 1}")
-                st.image(st.session_state.images[variant2]['url'], use_container_width=True)
-                st.caption(f"Итераций: {st.session_state.images[variant2]['iterations']}")
-        else:
-            st.info("Выберите разные варианты для сравнения")
+    st.divider()
+    st.header("📋 Выбор варианта и финальные рекомендации")
+    
+    if 'selected_variant_idx' not in st.session_state:
+        st.session_state.selected_variant_idx = len(st.session_state.images) - 1
+    
+    st.markdown("### Выберите вариант для финальных рекомендаций:")
+    selected_variant = st.selectbox(
+        "Вариант дизайна",
+        range(len(st.session_state.images)),
+        index=st.session_state.selected_variant_idx,
+        format_func=lambda x: f"Вариант {x + 1}",
+        key="final_variant_selector"
+    )
+    st.session_state.selected_variant_idx = selected_variant
+    
+    st.image(st.session_state.images[selected_variant]['url'], use_container_width=True, caption=f"Вариант {selected_variant + 1}")
     
     st.divider()
-    st.header("📋 Финальные рекомендации")
     
     if st.session_state.saved_recommendations:
         st.markdown(st.session_state.saved_recommendations)
@@ -560,8 +548,8 @@ if st.session_state.images:
 Анализ:
 {st.session_state.analysis}
 
-Итоговый дизайн (промпт последнего варианта):
-{st.session_state.images[-1]['prompt']}
+Итоговый дизайн (промпт выбранного варианта):
+{st.session_state.images[st.session_state.selected_variant_idx]['prompt']}
 
 Дай детальные рекомендации."""
                 )
@@ -593,8 +581,11 @@ if st.session_state.images:
    - Примерная цена в рублях
    - Прямая ссылка на конкретный товар в онлайн-магазине (Леруа Мерлен, ИКЕА, Hoff, OBI, Wildberries, Ozon)
    
-ВАЖНО: Ссылки должны вести на конкретные товары, а не на главную страницу магазина.
-Используй реальные товары из этих магазинов. Если не уверен в точной ссылке, укажи поисковый запрос для магазина.
+ВАЖНО: 
+- Ссылки должны вести на конкретные товары, а не на главную страницу магазина
+- Все ссылки ОБЯЗАТЕЛЬНО должны начинаться с https://
+- Используй реальные товары из этих магазинов
+- Формат ссылок: https://leroymerlin.ru/product/..., https://www.ikea.com/ru/..., и т.д.
 
 Формат ответа:
 ### Категория
@@ -644,34 +635,26 @@ if st.session_state.images:
     st.divider()
     st.header("📄 Экспорт дизайн-проекта")
     
-    if 'pdf_buffer' not in st.session_state:
-        st.session_state.pdf_buffer = None
-    
-    if st.button("📥 Скачать PDF-отчет", key="generate_pdf_btn", use_container_width=True):
-        with st.spinner("📄 Создаю PDF-отчет..."):
-            try:
-                project_data = {
-                    'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
-                    'room_type': st.session_state.room_type,
-                    'purpose': st.session_state.purpose,
-                    'analysis': st.session_state.analysis,
-                    'variants': st.session_state.images,
-                    'recommendations': st.session_state.saved_recommendations,
-                    'created_at': datetime.now().strftime('%d.%m.%Y')
-                }
-                
-                st.session_state.pdf_buffer = generate_design_pdf(project_data)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Ошибка при создании PDF: {str(e)}")
-    
-    if st.session_state.pdf_buffer:
+    try:
+        project_data = {
+            'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
+            'room_type': st.session_state.room_type,
+            'purpose': st.session_state.purpose,
+            'analysis': st.session_state.analysis,
+            'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
+            'recommendations': st.session_state.saved_recommendations,
+            'created_at': datetime.now().strftime('%d.%m.%Y')
+        }
+        
+        pdf_buffer = generate_design_pdf(project_data)
+        
         st.download_button(
-            label="💾 Сохранить PDF на компьютер",
-            data=st.session_state.pdf_buffer,
+            label="📥 Скачать PDF-отчет",
+            data=pdf_buffer,
             file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
             mime="application/pdf",
             key="download_pdf_btn",
             use_container_width=True
         )
-        st.success("✅ PDF-отчет готов к скачиванию!")
+    except Exception as e:
+        st.error(f"Ошибка при создании PDF: {str(e)}")

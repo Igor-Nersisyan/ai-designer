@@ -30,7 +30,8 @@ def generate_design_pdf(project_data):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4,
                            rightMargin=2*cm, leftMargin=2*cm,
-                           topMargin=2*cm, bottomMargin=2*cm)
+                           topMargin=2*cm, bottomMargin=2*cm,
+                           showBoundary=0)
     
     story = []
     styles = getSampleStyleSheet()
@@ -65,28 +66,6 @@ def generate_design_pdf(project_data):
     
     story.append(Paragraph("Дизайн-проект", title_style))
     story.append(Paragraph(f"<b>{project_data['name']}</b>", heading_style))
-    story.append(Spacer(1, 0.5*cm))
-    
-    from datetime import datetime
-    created_at = project_data.get('created_at', datetime.now().strftime('%d.%m.%Y'))
-    
-    info_data = [
-        ['Тип помещения:', project_data['room_type']],
-        ['Цель использования:', project_data['purpose']],
-        ['Дата создания:', created_at]
-    ]
-    info_table = Table(info_data, colWidths=[5*cm, 11*cm])
-    info_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f0f0f0')),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (0, -1), 'DejaVuSans-Bold'),
-        ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cccccc'))
-    ]))
-    story.append(info_table)
     story.append(Spacer(1, 1*cm))
     
     story.append(Paragraph("Анализ помещения", heading_style))
@@ -94,30 +73,25 @@ def generate_design_pdf(project_data):
     story.append(Paragraph(analysis_text, body_style))
     story.append(PageBreak())
     
-    story.append(Paragraph("Варианты дизайна", heading_style))
+    story.append(Paragraph("Вариант дизайна", heading_style))
     
-    for idx, variant in enumerate(project_data['variants'], 1):
-        story.append(Spacer(1, 0.5*cm))
-        story.append(Paragraph(f"<b>Вариант {idx}</b> (Итераций: {variant['iterations']})", heading_style))
+    variant = project_data['selected_variant']
+    
+    try:
+        response = requests.get(variant['url'], timeout=10)
+        img_data = BytesIO(response.content)
+        pil_img = Image.open(img_data)
         
-        try:
-            response = requests.get(variant['url'], timeout=10)
-            img_data = BytesIO(response.content)
-            pil_img = Image.open(img_data)
-            
-            img_buffer = BytesIO()
-            pil_img.save(img_buffer, format='PNG')
-            img_buffer.seek(0)
-            
-            img = RLImage(img_buffer, width=14*cm, height=14*cm*pil_img.height/pil_img.width)
-            story.append(img)
-        except Exception as e:
-            story.append(Paragraph(f"Не удалось загрузить изображение: {str(e)}", body_style))
+        img_buffer = BytesIO()
+        pil_img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
         
-        story.append(Spacer(1, 0.3*cm))
-        
-        if idx < len(project_data['variants']):
-            story.append(PageBreak())
+        img = RLImage(img_buffer, width=14*cm, height=14*cm*pil_img.height/pil_img.width)
+        story.append(img)
+    except Exception as e:
+        story.append(Paragraph(f"Не удалось загрузить изображение: {str(e)}", body_style))
+    
+    story.append(Spacer(1, 0.5*cm))
     
     if project_data.get('recommendations'):
         story.append(PageBreak())

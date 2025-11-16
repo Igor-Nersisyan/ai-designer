@@ -328,19 +328,17 @@ with st.sidebar:
     )
     
     analyze_button = st.button("🔍 Начать анализ", type="primary", disabled=not uploaded_file)
-    
-    st.divider()
-    
-    if st.button("🔄 Начать заново"):
-        user_id = st.session_state.get('user_id')
-        username = st.session_state.get('username')
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.session_state.user_id = user_id
-        st.session_state.username = username
-        st.rerun()
 
 if analyze_button and uploaded_file:
+    if st.session_state.analysis:
+        st.session_state.analysis = None
+        st.session_state.images = []
+        st.session_state.selected_image_idx = None
+        st.session_state.pop('selected_variant_idx', None)
+        st.session_state.saved_recommendations = None
+        st.session_state.saved_shopping_list = None
+        st.session_state.current_project_id = None
+    
     st.session_state.room_type = room_type
     st.session_state.purpose = purpose
     st.session_state.auto_save_enabled = True

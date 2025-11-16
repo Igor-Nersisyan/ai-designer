@@ -26,12 +26,14 @@ def clean_markdown(text):
     text = text.replace('\n', '<br/>')
     return text
 
+def blank_page(canvas, doc):
+    pass
+
 def generate_design_pdf(project_data):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4,
                            rightMargin=2*cm, leftMargin=2*cm,
-                           topMargin=2*cm, bottomMargin=2*cm,
-                           showBoundary=0)
+                           topMargin=2*cm, bottomMargin=2*cm)
     
     story = []
     styles = getSampleStyleSheet()
@@ -66,12 +68,7 @@ def generate_design_pdf(project_data):
     
     story.append(Paragraph("Дизайн-проект", title_style))
     story.append(Paragraph(f"<b>{project_data['name']}</b>", heading_style))
-    story.append(Spacer(1, 1*cm))
-    
-    story.append(Paragraph("Анализ помещения", heading_style))
-    analysis_text = clean_markdown(project_data['analysis'])
-    story.append(Paragraph(analysis_text, body_style))
-    story.append(PageBreak())
+    story.append(Spacer(1, 0.5*cm))
     
     story.append(Paragraph("Вариант дизайна", heading_style))
     
@@ -91,7 +88,11 @@ def generate_design_pdf(project_data):
     except Exception as e:
         story.append(Paragraph(f"Не удалось загрузить изображение: {str(e)}", body_style))
     
-    story.append(Spacer(1, 0.5*cm))
+    story.append(PageBreak())
+    
+    story.append(Paragraph("Анализ помещения", heading_style))
+    analysis_text = clean_markdown(project_data['analysis'])
+    story.append(Paragraph(analysis_text, body_style))
     
     if project_data.get('recommendations'):
         story.append(PageBreak())
@@ -99,6 +100,6 @@ def generate_design_pdf(project_data):
         rec_text = clean_markdown(project_data['recommendations'])
         story.append(Paragraph(rec_text, body_style))
     
-    doc.build(story)
+    doc.build(story, onFirstPage=blank_page, onLaterPages=blank_page)
     buffer.seek(0)
     return buffer

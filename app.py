@@ -248,9 +248,11 @@ with st.sidebar:
                     st.session_state.saved_recommendations = None
                     st.session_state.saved_shopping_list = None
                 
+                st.session_state.selected_variant_idx = None
+                
                 st.rerun()
             else:
-                for key in ['current_project_id', 'room_type', 'purpose', 'analysis', 'uploaded_image_b64', 'images', 'saved_recommendations']:
+                for key in ['current_project_id', 'room_type', 'purpose', 'analysis', 'uploaded_image_b64', 'images', 'saved_recommendations', 'selected_variant_idx']:
                     if key in st.session_state:
                         if key == 'images':
                             st.session_state[key] = []
@@ -499,38 +501,39 @@ if st.session_state.images:
                                 st.error(f"Ошибка при доработке дизайна: {str(e)}")
                     else:
                         st.warning("Опишите желаемые изменения")
+                
+                st.divider()
+                
+                if st.button("✅ Выбрать этот дизайн", type="primary", key=f"select_{idx}", use_container_width=True):
+                    prev_idx = st.session_state.get('selected_variant_idx')
+                    if prev_idx is not None and prev_idx != idx:
+                        st.session_state.saved_recommendations = None
+                        st.session_state.saved_shopping_list = None
+                    st.session_state.selected_variant_idx = idx
+                    st.success(f"✅ Выбран вариант {idx + 1}")
+                    st.rerun()
             
             st.divider()
     
-    st.divider()
-    st.header("📋 Выбор варианта и финальные рекомендации")
-    
-    if 'selected_variant_idx' not in st.session_state:
-        st.session_state.selected_variant_idx = len(st.session_state.images) - 1
-    
-    st.markdown("### Выберите вариант для финальных рекомендаций:")
-    selected_variant = st.selectbox(
-        "Вариант дизайна",
-        range(len(st.session_state.images)),
-        index=st.session_state.selected_variant_idx,
-        format_func=lambda x: f"Вариант {x + 1}",
-        key="final_variant_selector"
-    )
-    st.session_state.selected_variant_idx = selected_variant
-    
-    st.image(st.session_state.images[selected_variant]['url'], use_container_width=True, caption=f"Вариант {selected_variant + 1}")
-    
-    st.divider()
-    
-    if st.session_state.saved_recommendations:
-        st.markdown(st.session_state.saved_recommendations)
-    
-    if st.button("📝 Получить детальные рекомендации по материалам", key="get_recommendations"):
-        with st.spinner("📝 Формирую рекомендации..."):
-            try:
-                recommendations = call_gpt4o(
-                    client,
-                    """Ты — эксперт по дизайну интерьеров и материалам отделки. 
+    if ('selected_variant_idx' in st.session_state and 
+        st.session_state.selected_variant_idx is not None and 
+        0 <= st.session_state.selected_variant_idx < len(st.session_state.images)):
+        st.divider()
+        st.header("📋 Финальные рекомендации")
+        st.info(f"Выбран вариант {st.session_state.selected_variant_idx + 1}")
+        st.image(st.session_state.images[st.session_state.selected_variant_idx]['url'], use_container_width=True)
+        
+        st.divider()
+        
+        if st.session_state.saved_recommendations:
+            st.markdown(st.session_state.saved_recommendations)
+        
+        if st.button("📝 Получить детальные рекомендации по материалам", key="get_recommendations"):
+            with st.spinner("📝 Формирую рекомендации..."):
+                try:
+                    recommendations = call_gpt4o(
+                        client,
+                        """Ты — эксперт по дизайну интерьеров и материалам отделки. 
 На основе анализа и выбранного дизайна дай детальные рекомендации по:
 1. Отделке стен (материалы, цвета, текстуры)
 2. Напольному покрытию (тип, цвет, характеристики)
@@ -540,7 +543,7 @@ if st.session_state.images:
 6. Декору и аксессуарам
 
 Будь конкретным: указывай бренды, артикулы, примерные цены (в рублях).""",
-                    f"""Тип помещения: {st.session_state.room_type}
+                        f"""Тип помещения: {st.session_state.room_type}
 Цель: {st.session_state.purpose}
 
 Анализ:
@@ -550,109 +553,101 @@ if st.session_state.images:
 {st.session_state.images[st.session_state.selected_variant_idx]['prompt']}
 
 Дай детальные рекомендации."""
-                )
-                
-                st.session_state.saved_recommendations = recommendations
-                auto_save_project()
-                st.markdown(recommendations)
-            except Exception as e:
-                st.error(f"Ошибка при формировании рекомендаций: {str(e)}")
-                st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
-    
-    st.divider()
-    st.header("🛒 Список покупок")
-    
-    if st.session_state.saved_shopping_list:
-        st.markdown(st.session_state.saved_shopping_list)
-    
-    if st.button("📝 Создать список покупок", key="generate_shopping_list"):
-        with st.spinner("🛒 Создаю список покупок..."):
-            try:
-                shopping_list = call_gpt4o(
-                    client,
-                    """Ты — эксперт по закупкам материалов для ремонта. Создай детальный список покупок с:
+                    )
+                    
+                    st.session_state.saved_recommendations = recommendations
+                    auto_save_project()
+                    st.markdown(recommendations)
+                except Exception as e:
+                    st.error(f"Ошибка при формировании рекомендаций: {str(e)}")
+                    st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
+        
+        st.divider()
+        st.header("🛒 Список покупок")
+        
+        if st.session_state.saved_shopping_list:
+            st.markdown(st.session_state.saved_shopping_list)
+        
+        if st.button("📝 Создать список покупок", key="generate_shopping_list"):
+            with st.spinner("🛒 Создаю список покупок..."):
+                try:
+                    shopping_list = call_gpt4o(
+                        client,
+                        """Ты — эксперт по закупкам материалов для ремонта. Создай детальный список покупок с:
 1. Категориями (Отделка стен, Пол, Потолок, Мебель, Освещение, Декор)
 2. Для каждого товара укажи:
    - Конкретное название товара и артикул (если возможно)
    - Описание
    - Количество
    - Примерная цена в рублях
-   - Прямая ссылка на конкретный товар в онлайн-магазине (Леруа Мерлен, ИКЕА, Hoff, OBI, Wildberries, Ozon)
-   
-ВАЖНО: 
-- Ссылки должны вести на конкретные товары, а не на главную страницу магазина
-- Все ссылки ОБЯЗАТЕЛЬНО должны начинаться с https://
-- Используй реальные товары из этих магазинов
-- Формат ссылок: https://leroymerlin.ru/product/..., https://www.ikea.com/ru/..., и т.д.
 
 Формат ответа:
 ### Категория
 1. **Название товара (артикул)** - описание
    - Количество: X шт/м²/л
-   - Цена: ~X руб
-   - [Купить в магазине](прямая ссылка на товар)""",
-                    f"""Тип помещения: {st.session_state.room_type}
+   - Цена: ~X руб""",
+                        f"""Тип помещения: {st.session_state.room_type}
 Рекомендации:
 {st.session_state.saved_recommendations if st.session_state.saved_recommendations else st.session_state.analysis}
 
 Создай список покупок."""
-                )
-                st.session_state.saved_shopping_list = shopping_list
-                auto_save_project()
-                st.markdown(shopping_list)
-            except Exception as e:
-                st.error(f"Ошибка при создании списка: {str(e)}")
-    
-    st.divider()
-    st.header("💰 Калькулятор бюджета")
-    
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.markdown("### Основные категории расходов")
+                    )
+                    st.session_state.saved_shopping_list = shopping_list
+                    auto_save_project()
+                    st.markdown(shopping_list)
+                except Exception as e:
+                    st.error(f"Ошибка при создании списка: {str(e)}")
         
-        walls_budget = st.number_input("Отделка стен (руб)", min_value=0, value=50000, step=5000, key="budget_walls")
-        floor_budget = st.number_input("Напольное покрытие (руб)", min_value=0, value=40000, step=5000, key="budget_floor")
-        ceiling_budget = st.number_input("Потолок (руб)", min_value=0, value=30000, step=5000, key="budget_ceiling")
-        furniture_budget = st.number_input("Мебель (руб)", min_value=0, value=100000, step=10000, key="budget_furniture")
-        lighting_budget = st.number_input("Освещение (руб)", min_value=0, value=20000, step=5000, key="budget_lighting")
-        decor_budget = st.number_input("Декор (руб)", min_value=0, value=15000, step=5000, key="budget_decor")
-        work_budget = st.number_input("Работы (руб)", min_value=0, value=80000, step=10000, key="budget_work")
-    
-    with col2:
-        st.markdown("### Итоговый бюджет")
-        total_budget = walls_budget + floor_budget + ceiling_budget + furniture_budget + lighting_budget + decor_budget + work_budget
-        st.metric("Общая сумма", f"{total_budget:,.0f} руб")
-        st.metric("С запасом (+ 15%)", f"{total_budget * 1.15:,.0f} руб")
+        st.divider()
+        st.header("💰 Калькулятор бюджета")
         
-        st.markdown("### Распределение по категориям")
-        st.progress(walls_budget / total_budget if total_budget > 0 else 0, text=f"Стены: {walls_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Стены: 0%")
-        st.progress(floor_budget / total_budget if total_budget > 0 else 0, text=f"Пол: {floor_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Пол: 0%")
-        st.progress(furniture_budget / total_budget if total_budget > 0 else 0, text=f"Мебель: {furniture_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Мебель: 0%")
-        st.progress(work_budget / total_budget if total_budget > 0 else 0, text=f"Работы: {work_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Работы: 0%")
-    
-    st.divider()
-    st.header("📄 Экспорт дизайн-проекта")
-    
-    try:
-        project_data = {
-            'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
-            'room_type': st.session_state.room_type,
-            'purpose': st.session_state.purpose,
-            'analysis': st.session_state.analysis,
-            'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
-            'recommendations': st.session_state.saved_recommendations,
-            'created_at': datetime.now().strftime('%d.%m.%Y')
-        }
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            st.markdown("### Основные категории расходов")
+            
+            walls_budget = st.number_input("Отделка стен (руб)", min_value=0, value=50000, step=5000, key="budget_walls")
+            floor_budget = st.number_input("Напольное покрытие (руб)", min_value=0, value=40000, step=5000, key="budget_floor")
+            ceiling_budget = st.number_input("Потолок (руб)", min_value=0, value=30000, step=5000, key="budget_ceiling")
+            furniture_budget = st.number_input("Мебель (руб)", min_value=0, value=100000, step=10000, key="budget_furniture")
+            lighting_budget = st.number_input("Освещение (руб)", min_value=0, value=20000, step=5000, key="budget_lighting")
+            decor_budget = st.number_input("Декор (руб)", min_value=0, value=15000, step=5000, key="budget_decor")
+            work_budget = st.number_input("Работы (руб)", min_value=0, value=80000, step=10000, key="budget_work")
         
-        pdf_buffer = generate_design_pdf(project_data)
+        with col2:
+            st.markdown("### Итоговый бюджет")
+            total_budget = walls_budget + floor_budget + ceiling_budget + furniture_budget + lighting_budget + decor_budget + work_budget
+            st.metric("Общая сумма", f"{total_budget:,.0f} руб")
+            st.metric("С запасом (+ 15%)", f"{total_budget * 1.15:,.0f} руб")
+            
+            st.markdown("### Распределение по категориям")
+            st.progress(walls_budget / total_budget if total_budget > 0 else 0, text=f"Стены: {walls_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Стены: 0%")
+            st.progress(floor_budget / total_budget if total_budget > 0 else 0, text=f"Пол: {floor_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Пол: 0%")
+            st.progress(furniture_budget / total_budget if total_budget > 0 else 0, text=f"Мебель: {furniture_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Мебель: 0%")
+            st.progress(work_budget / total_budget if total_budget > 0 else 0, text=f"Работы: {work_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Работы: 0%")
         
-        st.download_button(
-            label="📥 Скачать PDF-отчет",
-            data=pdf_buffer,
-            file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
-            mime="application/pdf",
-            key="download_pdf_btn",
-            use_container_width=True
-        )
-    except Exception as e:
-        st.error(f"Ошибка при создании PDF: {str(e)}")
+        st.divider()
+        st.header("📄 Экспорт дизайн-проекта")
+        
+        try:
+            project_data = {
+                'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
+                'room_type': st.session_state.room_type,
+                'purpose': st.session_state.purpose,
+                'analysis': st.session_state.analysis,
+                'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
+                'recommendations': st.session_state.saved_recommendations,
+                'created_at': datetime.now().strftime('%d.%m.%Y')
+            }
+            
+            pdf_buffer = generate_design_pdf(project_data)
+            
+            st.download_button(
+                label="📥 Скачать PDF-отчет",
+                data=pdf_buffer,
+                file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
+                mime="application/pdf",
+                key="download_pdf_btn",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"Ошибка при создании PDF: {str(e)}")

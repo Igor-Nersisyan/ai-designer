@@ -68,7 +68,7 @@ API calls are wrapped in try-except blocks within utility functions, with error 
 
 ## Database Architecture
 Uses PostgreSQL for project persistence with three main tables:
-- **projects**: Stores project metadata, room analysis, and base64-encoded images
+- **projects**: Stores project metadata, room analysis, base64-encoded images, and `user_id` for multi-user support
 - **design_variants**: Stores generated design images with prompts and iteration counts
 - **recommendations**: Stores material recommendations and shopping lists
 
@@ -87,6 +87,7 @@ API authentication uses environment variables loaded via dotenv, keeping sensiti
 3. **Shopping List Generator**: AI-powered material shopping lists with store links
 4. **Budget Calculator**: Interactive renovation cost estimation with category breakdowns
 5. **PDF Export**: Complete design packages with images and recommendations
+6. **Multi-User Support**: Simple username-based authentication for project separation (November 16, 2025)
 
 ## UX Improvements (November 15, 2025)
 1. **Auto-load Projects**: Projects now load automatically when selected from dropdown (removed "Load" button)
@@ -114,3 +115,9 @@ API authentication uses environment variables loaded via dotenv, keeping sensiti
 - **Refinement Layout**: Refinement UI always visible inline in col2 next to design variant images (removed `selected_image_idx` logic)
 - **PDF Generation Flow**: Two-step process - first button generates and caches PDF in `session_state.pdf_buffer`, second button (download_button) serves cached file
 - **Database Migration**: Added `shopping_list` column to `recommendations` table with `ALTER TABLE IF NOT EXISTS` for backward compatibility
+- **Multi-User System** (November 16, 2025):
+  - Added `user_id` column to `projects` table with index for performance
+  - Simple login form at app start - users enter their name/username
+  - All project queries filtered by `user_id` to ensure data isolation
+  - Logout functionality clears session state
+  - User identification stored in `session_state.user_id` and `session_state.username`

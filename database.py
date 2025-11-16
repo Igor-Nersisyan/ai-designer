@@ -14,6 +14,7 @@ class Project(Base):
     __tablename__ = "projects"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, nullable=False, index=True)
     name = Column(String, nullable=False)
     room_type = Column(String, nullable=False)
     purpose = Column(Text)

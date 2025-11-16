@@ -100,16 +100,23 @@ if 'last_selected_project' not in st.session_state:
     st.session_state.last_selected_project = None
 if 'auto_save_enabled' not in st.session_state:
     st.session_state.auto_save_enabled = False
+if 'user_id' not in st.session_state:
+    st.session_state.user_id = None
+if 'username' not in st.session_state:
+    st.session_state.username = None
 
 def auto_save_project():
-    if not st.session_state.auto_save_enabled or not st.session_state.analysis:
+    if not st.session_state.auto_save_enabled or not st.session_state.analysis or not st.session_state.user_id:
         return
     
     db = SessionLocal()
     try:
         project_name = f"Проект {datetime.now().strftime('%d.%m.%Y %H:%M')}"
         if st.session_state.current_project_id:
-            project = db.query(Project).filter(Project.id == st.session_state.current_project_id).first()
+            project = db.query(Project).filter(
+                Project.id == st.session_state.current_project_id,
+                Project.user_id == st.session_state.user_id
+            ).first()
             if project:
                 project.room_type = st.session_state.room_type
                 project.purpose = st.session_state.purpose
@@ -121,6 +128,7 @@ def auto_save_project():
         else:
             project = Project(
                 name=project_name,
+                user_id=st.session_state.user_id,
                 room_type=st.session_state.room_type,
                 purpose=st.session_state.purpose,
                 analysis=st.session_state.analysis,
@@ -159,13 +167,41 @@ def auto_save_project():
         db.close()
 
 st.title("🏠 AI-Дизайнер по ремонту")
+
+if not st.session_state.user_id:
+    st.markdown("### 👤 Вход в систему")
+    st.markdown("Для работы с проектами введите ваше имя или логин")
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        username_input = st.text_input("Ваше имя", placeholder="Введите имя или логин", key="username_input")
+    with col2:
+        st.write("")
+        st.write("")
+        if st.button("Войти", type="primary", disabled=not username_input):
+            st.session_state.user_id = username_input.lower().replace(" ", "_")
+            st.session_state.username = username_input
+            st.rerun()
+    
+    st.info("💡 Ваше имя используется для разделения проектов между пользователями. Каждый пользователь видит только свои проекты.")
+    st.stop()
+
+col1, col2 = st.columns([5, 1])
+with col1:
+    st.markdown(f"**Пользователь:** {st.session_state.username}")
+with col2:
+    if st.button("Выйти", key="logout_btn"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+
 st.markdown("Загрузите фото помещения и получите профессиональный дизайн-проект")
 
 with st.sidebar:
     st.header("📋 Управление проектами")
     
     db = SessionLocal()
-    projects = db.query(Project).order_by(Project.updated_at.desc()).all()
+    projects = db.query(Project).filter(Project.user_id == st.session_state.user_id).order_by(Project.updated_at.desc()).all()
     
     if projects:
         project_options = ["Новый проект"] + [f"{p.name} ({p.room_type})" for p in projects]
@@ -181,6 +217,11 @@ with st.sidebar:
             if selected_project != "Новый проект":
                 project_idx = project_options.index(selected_project) - 1
                 project = projects[project_idx]
+                
+                if project.user_id != st.session_state.user_id:
+                    st.error("⛔ Нет доступа к этому проекту")
+                    st.stop()
+                
                 st.session_state.current_project_id = project.id
                 st.session_state.room_type = project.room_type
                 st.session_state.purpose = project.purpose

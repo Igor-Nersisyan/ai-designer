@@ -369,15 +369,23 @@ if st.session_state.analysis:
     
     col1, col2 = st.columns([2, 1])
     
+    if 'selected_styles' not in st.session_state:
+        st.session_state.selected_styles = ["Скандинавский"]
+    if 'selected_color' not in st.session_state:
+        st.session_state.selected_color = "#FFFFFF"
+    
     with col1:
         styles = st.multiselect(
             "Выберите стили (можно несколько)",
-            ["Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прованс"],
-            default=["Скандинавский"]
+            ["Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прованс", "Нейтральный"],
+            default=st.session_state.selected_styles,
+            key="styles_select"
         )
+        st.session_state.selected_styles = styles if styles else st.session_state.selected_styles
     
     with col2:
-        main_color = st.color_picker("Основной цвет", "#FFFFFF")
+        main_color = st.color_picker("Основной цвет", st.session_state.selected_color, key="color_select")
+        st.session_state.selected_color = main_color
     
     additional_preferences = st.text_input(
         "Дополнительные пожелания (опционально)",

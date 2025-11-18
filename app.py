@@ -513,12 +513,27 @@ if st.session_state.images:
                 st.divider()
                 
                 if st.button("✅ Выбрать этот дизайн", type="primary", key=f"select_{idx}", use_container_width=True):
-                    prev_idx = st.session_state.get('selected_variant_idx')
-                    if prev_idx is not None and prev_idx != idx:
-                        st.session_state.saved_recommendations = None
-                        st.session_state.saved_shopping_list = None
-                    st.session_state.selected_variant_idx = idx
-                    st.success(f"✅ Выбран вариант {idx + 1}")
+                    selected_variant = st.session_state.images[idx]
+                    st.session_state.images = [selected_variant]
+                    st.session_state.selected_variant_idx = 0
+                    st.session_state.saved_recommendations = None
+                    st.session_state.saved_shopping_list = None
+                    st.session_state.needs_generation = True
+                    
+                    if st.session_state.current_project_id:
+                        db = SessionLocal()
+                        try:
+                            db.query(DesignVariant).filter(
+                                DesignVariant.project_id == st.session_state.current_project_id
+                            ).delete()
+                            db.commit()
+                        except Exception as e:
+                            st.error(f"Ошибка удаления вариантов: {str(e)}")
+                            db.rollback()
+                        finally:
+                            db.close()
+                    
+                    auto_save_project()
                     st.rerun()
             
             st.divider()
@@ -528,15 +543,74 @@ if st.session_state.images:
         0 <= st.session_state.selected_variant_idx < len(st.session_state.images)):
         st.divider()
         st.header("📋 Финальные рекомендации")
-        st.info(f"Выбран вариант {st.session_state.selected_variant_idx + 1}")
-        st.image(st.session_state.images[st.session_state.selected_variant_idx]['url'], use_container_width=True)
         
-        st.divider()
+        if st.session_state.get('needs_generation', False):
+            st.session_state.needs_generation = False
+            
+            with st.spinner("📝 Формирую рекомендации..."):
+                try:
+                    recommendations = call_gpt4o(
+                        client,
+                        """Ты — эксперт по дизайну интерьеров и материалам отделки. 
+На основе анализа и выбранного дизайна дай детальные рекомендации по:
+1. Отделке стен (материалы, цвета, текстуры)
+2. Напольному покрытию (тип, цвет, характеристики)
+3. Потолку (отделка, освещение)
+4. Мебели (конкретные рекомендации с размерами)
+5. Освещению (типы светильников, расположение)
+6. Декору и аксессуарам
+
+Будь конкретным: указывай бренды, артикулы, примерные цены (в рублях).""",
+                        f"""Тип помещения: {st.session_state.room_type}
+Цель: {st.session_state.purpose}
+
+Анализ:
+{st.session_state.analysis}
+
+Итоговый дизайн (промпт выбранного варианта):
+{st.session_state.images[st.session_state.selected_variant_idx]['prompt']}
+
+Дай детальные рекомендации."""
+                    )
+                    st.session_state.saved_recommendations = recommendations
+                except Exception as e:
+                    st.error(f"Ошибка: {str(e)}")
+            
+            with st.spinner("🛒 Создаю список покупок..."):
+                try:
+                    shopping_list = call_gpt4o(
+                        client,
+                        """Ты — эксперт по закупкам материалов для ремонта. Создай детальный список покупок с:
+1. Категориями (Отделка стен, Пол, Потолок, Мебель, Освещение, Декор)
+2. Для каждого товара укажи:
+   - Конкретное название товара и артикул (если возможно)
+   - Описание
+   - Количество
+   - Примерная цена в рублях
+
+Формат ответа:
+### Категория
+1. **Название товара (артикул)** - описание
+   - Количество: X шт/м²/л
+   - Цена: ~X руб""",
+                        f"""Тип помещения: {st.session_state.room_type}
+Рекомендации:
+{st.session_state.saved_recommendations}
+
+Создай список покупок."""
+                    )
+                    st.session_state.saved_shopping_list = shopping_list
+                except Exception as e:
+                    st.error(f"Ошибка: {str(e)}")
+            
+            auto_save_project()
+            st.rerun()
         
+        st.subheader("💡 Детальные рекомендации по материалам")
         if st.session_state.saved_recommendations:
             st.markdown(st.session_state.saved_recommendations)
         
-        if st.button("📝 Получить детальные рекомендации по материалам", key="get_recommendations"):
+        if st.button("📝 Обновить рекомендации", key="get_recommendations"):
             with st.spinner("📝 Формирую рекомендации..."):
                 try:
                     recommendations = call_gpt4o(

@@ -33,6 +33,9 @@ def call_gpt4o_vision(client: OpenAI, system_prompt: str, user_text: str, image_
         
         raw_content = response.choices[0].message.content
         
+        if not raw_content:
+            raise Exception("Пустой ответ от GPT-4o Vision")
+        
         try:
             parsed_json = json.loads(raw_content)
             if "analysis" in parsed_json:

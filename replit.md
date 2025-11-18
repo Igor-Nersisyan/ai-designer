@@ -81,6 +81,19 @@ API authentication uses environment variables loaded via dotenv, keeping sensiti
 
 # Recent Changes
 
+## November 18, 2025
+1. **JSON-структурированный вывод анализа**: GPT-4o Vision теперь возвращает анализ в формате JSON с двумя полями:
+   - `reasoning`: внутренние рассуждения модели (пошаговый мыслительный процесс)
+   - `analysis`: финальный анализ в формате Markdown для отображения пользователю
+2. **Автоматический парсинг**: Функция `call_gpt4o_vision` автоматически извлекает поле `analysis` из JSON-ответа
+3. **Fallback-механизм**: При ошибках парсинга JSON система возвращает текстовый ответ как есть
+4. **Улучшенная валидация**: Добавлена проверка на пустой ответ от API
+
+**Техническая реализация:**
+- Параметр `response_format={"type": "json_object"}` для гарантии JSON-ответа
+- Двухуровневый try-except для обработки ошибок парсинга и API
+- Поле `reasoning` используется моделью для структурированного анализа перед формированием финального ответа
+
 ## November 16, 2025
 1. **Variant Selection Redesign**: Each design variant now has a "Выбрать этот дизайн" button positioned next to the image
 2. **Removed Separate Selection Section**: Deleted the standalone selectbox section for variant selection - selection now happens inline

@@ -27,7 +27,8 @@ def clean_markdown(text):
     return text
 
 def blank_page(canvas, doc):
-    pass
+    canvas.saveState()
+    canvas.restoreState()
 
 def generate_design_pdf(project_data):
     buffer = BytesIO()
@@ -68,9 +69,10 @@ def generate_design_pdf(project_data):
     
     story.append(Paragraph("Дизайн-проект", title_style))
     story.append(Paragraph(f"<b>{project_data['name']}</b>", heading_style))
-    story.append(Spacer(1, 0.5*cm))
+    story.append(Spacer(1, 0.2*cm))
     
     story.append(Paragraph("Вариант дизайна", heading_style))
+    story.append(Spacer(1, 0.2*cm))
     
     variant = project_data['selected_variant']
     
@@ -79,11 +81,23 @@ def generate_design_pdf(project_data):
         img_data = BytesIO(response.content)
         pil_img = Image.open(img_data)
         
+        max_width = 12*cm
+        max_height = 12*cm
+        
+        aspect = pil_img.width / pil_img.height
+        
+        if aspect > 1:
+            img_width = max_width
+            img_height = max_width / aspect
+        else:
+            img_height = max_height
+            img_width = max_height * aspect
+        
         img_buffer = BytesIO()
         pil_img.save(img_buffer, format='PNG')
         img_buffer.seek(0)
         
-        img = RLImage(img_buffer, width=14*cm, height=14*cm*pil_img.height/pil_img.width)
+        img = RLImage(img_buffer, width=img_width, height=img_height)
         story.append(img)
     except Exception as e:
         story.append(Paragraph(f"Не удалось загрузить изображение: {str(e)}", body_style))

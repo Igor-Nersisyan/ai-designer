@@ -1,4 +1,5 @@
 import base64
+import json
 from openai import OpenAI
 
 def encode_image(uploaded_file):
@@ -6,7 +7,7 @@ def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
 def call_gpt4o_vision(client: OpenAI, system_prompt: str, user_text: str, image_base64: str) -> str:
-    """Вызов GPT-4o Vision для анализа изображения"""
+    """Вызов GPT-4o Vision для анализа изображения. Возвращает только поле 'analysis' из JSON-ответа."""
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -25,10 +26,22 @@ def call_gpt4o_vision(client: OpenAI, system_prompt: str, user_text: str, image_
                     ]
                 }
             ],
+            response_format={"type": "json_object"},
             max_tokens=2000,
             temperature=0.7
         )
-        return response.choices[0].message.content
+        
+        raw_content = response.choices[0].message.content
+        
+        try:
+            parsed_json = json.loads(raw_content)
+            if "analysis" in parsed_json:
+                return parsed_json["analysis"]
+            else:
+                return raw_content
+        except json.JSONDecodeError:
+            return raw_content
+            
     except Exception as e:
         raise Exception(f"Ошибка GPT-4o Vision: {str(e)}")
 

@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -48,6 +48,7 @@ class Recommendation(Base):
     project_id = Column(Integer, ForeignKey("projects.id"))
     content = Column(Text, nullable=False)
     shopping_list = Column(Text)
+    budget_data = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     project = relationship("Project", back_populates="recommendations")

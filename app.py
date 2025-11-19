@@ -5,6 +5,7 @@ import io
 from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_DALLE_ENGINEER
 from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision
 import os
+import json
 from dotenv import load_dotenv
 from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
 from datetime import datetime
@@ -129,6 +130,8 @@ if 'saved_recommendations' not in st.session_state:
     st.session_state.saved_recommendations = None
 if 'saved_shopping_list' not in st.session_state:
     st.session_state.saved_shopping_list = None
+if 'saved_budget' not in st.session_state:
+    st.session_state.saved_budget = {}
 if 'last_selected_project' not in st.session_state:
     st.session_state.last_selected_project = None
 if 'auto_save_enabled' not in st.session_state:
@@ -192,16 +195,20 @@ def auto_save_project():
             )
             db.add(variant)
         
-        if st.session_state.saved_recommendations or st.session_state.saved_shopping_list:
+        if st.session_state.saved_recommendations or st.session_state.saved_shopping_list or st.session_state.get('saved_budget'):
             existing_rec = db.query(Recommendation).filter(Recommendation.project_id == project.id).first()
+            budget_json = json.dumps(st.session_state.get('saved_budget', {})) if st.session_state.get('saved_budget') else None
             if existing_rec:
                 existing_rec.content = st.session_state.saved_recommendations or existing_rec.content
                 existing_rec.shopping_list = st.session_state.saved_shopping_list
+                if budget_json:
+                    existing_rec.budget_data = budget_json
             else:
                 rec = Recommendation(
                     project_id=project.id,
                     content=st.session_state.saved_recommendations or "",
-                    shopping_list=st.session_state.saved_shopping_list
+                    shopping_list=st.session_state.saved_shopping_list,
+                    budget_data=budget_json
                 )
                 db.add(rec)
         
@@ -306,9 +313,17 @@ with st.sidebar:
                 if recommendations:
                     st.session_state.saved_recommendations = recommendations.content
                     st.session_state.saved_shopping_list = recommendations.shopping_list
+                    if recommendations.budget_data:
+                        try:
+                            st.session_state.saved_budget = json.loads(recommendations.budget_data)
+                        except:
+                            st.session_state.saved_budget = {}
+                    else:
+                        st.session_state.saved_budget = {}
                 else:
                     st.session_state.saved_recommendations = None
                     st.session_state.saved_shopping_list = None
+                    st.session_state.saved_budget = {}
                 
                 st.session_state.selected_variant_idx = None
                 
@@ -732,17 +747,19 @@ if st.session_state.images:
         st.divider()
         st.header("💰 Калькулятор бюджета")
         
+        saved_budget = st.session_state.get('saved_budget', {})
+        
         col1, col2 = st.columns([2, 1])
         with col1:
             st.markdown("### Основные категории расходов")
             
-            walls_budget = st.number_input("Отделка стен (руб)", min_value=0, value=50000, step=5000, key="budget_walls")
-            floor_budget = st.number_input("Напольное покрытие (руб)", min_value=0, value=40000, step=5000, key="budget_floor")
-            ceiling_budget = st.number_input("Потолок (руб)", min_value=0, value=30000, step=5000, key="budget_ceiling")
-            furniture_budget = st.number_input("Мебель (руб)", min_value=0, value=100000, step=10000, key="budget_furniture")
-            lighting_budget = st.number_input("Освещение (руб)", min_value=0, value=20000, step=5000, key="budget_lighting")
-            decor_budget = st.number_input("Декор (руб)", min_value=0, value=15000, step=5000, key="budget_decor")
-            work_budget = st.number_input("Работы (руб)", min_value=0, value=80000, step=10000, key="budget_work")
+            walls_budget = st.number_input("Отделка стен (руб)", min_value=0, value=saved_budget.get('walls', 50000), step=5000, key="budget_walls")
+            floor_budget = st.number_input("Напольное покрытие (руб)", min_value=0, value=saved_budget.get('floor', 40000), step=5000, key="budget_floor")
+            ceiling_budget = st.number_input("Потолок (руб)", min_value=0, value=saved_budget.get('ceiling', 30000), step=5000, key="budget_ceiling")
+            furniture_budget = st.number_input("Мебель (руб)", min_value=0, value=saved_budget.get('furniture', 100000), step=10000, key="budget_furniture")
+            lighting_budget = st.number_input("Освещение (руб)", min_value=0, value=saved_budget.get('lighting', 20000), step=5000, key="budget_lighting")
+            decor_budget = st.number_input("Декор (руб)", min_value=0, value=saved_budget.get('decor', 15000), step=5000, key="budget_decor")
+            work_budget = st.number_input("Работы (руб)", min_value=0, value=saved_budget.get('work', 80000), step=10000, key="budget_work")
         
         with col2:
             st.markdown("### Итоговый бюджет")
@@ -756,12 +773,25 @@ if st.session_state.images:
             st.progress(furniture_budget / total_budget if total_budget > 0 else 0, text=f"Мебель: {furniture_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Мебель: 0%")
             st.progress(work_budget / total_budget if total_budget > 0 else 0, text=f"Работы: {work_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Работы: 0%")
         
+        if st.button("💾 Сохранить бюджет", key="save_budget_btn", use_container_width=True):
+            st.session_state.saved_budget = {
+                'walls': walls_budget,
+                'floor': floor_budget,
+                'ceiling': ceiling_budget,
+                'furniture': furniture_budget,
+                'lighting': lighting_budget,
+                'decor': decor_budget,
+                'work': work_budget
+            }
+            auto_save_project()
+            st.success("✅ Бюджет сохранён!")
+        
         st.divider()
         st.header("📄 Экспорт дизайн-проекта")
         
         st.markdown("Скачайте полный отчёт по дизайн-проекту в формате PDF")
         
-        if st.button("📥 Скачать PDF-отчет", type="primary", key="generate_pdf_btn", use_container_width=True):
+        if st.button("📥 Создать PDF-отчет", type="primary", key="generate_pdf_btn", use_container_width=True):
             try:
                 with st.spinner("📄 Создаю PDF-отчет..."):
                     project_data = {
@@ -775,15 +805,19 @@ if st.session_state.images:
                     }
                     
                     pdf_buffer = generate_design_pdf(project_data)
-                    
-                    st.download_button(
-                        label="💾 Сохранить PDF",
-                        data=pdf_buffer,
-                        file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
-                        mime="application/pdf",
-                        key="download_pdf_btn",
-                        use_container_width=True
-                    )
+                    st.session_state.pdf_ready = pdf_buffer
+                    st.session_state.pdf_filename = f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+                    st.success("✅ PDF готов! Нажмите кнопку ниже для скачивания")
             except Exception as e:
                 st.error(f"Ошибка при создании PDF: {str(e)}")
                 st.error("Пожалуйста, попробуйте ещё раз или проверьте, что все данные заполнены.")
+        
+        if st.session_state.get('pdf_ready'):
+            st.download_button(
+                label="💾 Скачать PDF",
+                data=st.session_state.pdf_ready,
+                file_name=st.session_state.pdf_filename,
+                mime="application/pdf",
+                key="download_pdf_btn",
+                use_container_width=True
+            )

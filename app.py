@@ -416,18 +416,18 @@ if st.session_state.analysis:
         else:
             with st.spinner("🎨 Создаю дизайн-проект..."):
                 try:
-                    analysis_summary = st.session_state.analysis[:500] if len(st.session_state.analysis) > 500 else st.session_state.analysis
-                    
-                    user_request = f"""Тип помещения: {st.session_state.room_type}
-Цель использования: {st.session_state.purpose}
-Стили: {', '.join(styles)}
-Основной цвет: {main_color}
-Дополнительные пожелания: {additional_preferences if additional_preferences else 'нет'}
-Краткий анализ: {analysis_summary}"""
-                    
                     dalle_prompt = call_gemini(
                         SYSTEM_PROMPT_DALLE_ENGINEER,
-                        user_request
+                        f"""Анализ помещения:
+{st.session_state.analysis}
+
+Тип помещения: {st.session_state.room_type}
+Цель: {st.session_state.purpose}
+Стили: {', '.join(styles)}
+Основной цвет: {main_color}
+Дополнительно: {additional_preferences}
+
+Создай детальный промпт для генерации изображения."""
                     )
                     
                     image_url = generate_image(st.session_state.uploaded_image_bytes, dalle_prompt)

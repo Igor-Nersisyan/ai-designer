@@ -99,10 +99,16 @@ def generate_image(source_image_bytes: bytes, prompt: str) -> str:
     """Генерация изображения через Google Gemini API (gemini-2.5-flash-image)"""
     try:
         import requests
+        from PIL import Image
+        import io
         
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise Exception("GEMINI_API_KEY не найден. Пожалуйста, добавьте API ключ в настройки.")
+        
+        img = Image.open(io.BytesIO(source_image_bytes))
+        img_format = img.format.lower() if img.format else 'jpeg'
+        mime_type = f"image/{img_format}" if img_format in ['jpeg', 'png', 'jpg'] else "image/jpeg"
         
         base64_image = base64.b64encode(source_image_bytes).decode('utf-8')
         
@@ -121,7 +127,7 @@ def generate_image(source_image_bytes: bytes, prompt: str) -> str:
                         },
                         {
                             "inline_data": {
-                                "mime_type": "image/jpeg",
+                                "mime_type": mime_type,
                                 "data": base64_image
                             }
                         }
@@ -133,18 +139,40 @@ def generate_image(source_image_bytes: bytes, prompt: str) -> str:
             }
         }
         
-        response = requests.post(url, headers=headers, json=request_body, timeout=60)
+        response = requests.post(url, headers=headers, json=request_body, timeout=120)
         
         if response.status_code != 200:
-            raise Exception(f"API Error {response.status_code}: {response.text}")
+            error_detail = response.text
+            raise Exception(f"API вернул ошибку {response.status_code}: {error_detail}")
         
         response_data = response.json()
         
-        if "candidates" not in response_data or len(response_data["candidates"]) == 0:
-            raise Exception("Нет кандидатов в ответе API")
+        if "candidates" not in response_data:
+            raise Exception(f"Неожиданный формат ответа: {response_data}")
         
-        base64_response = response_data["candidates"][0]["content"]["parts"][0]["inline_data"]["data"]
+        if len(response_data["candidates"]) == 0:
+            raise Exception("API не вернул результатов генерации")
         
+        candidate = response_data["candidates"][0]
+        
+        if "content" not in candidate:
+            raise Exception(f"Отсутствует 'content' в ответе: {candidate}")
+        
+        if "parts" not in candidate["content"]:
+            raise Exception(f"Отсутствует 'parts' в content: {candidate['content']}")
+        
+        parts = candidate["content"]["parts"]
+        if len(parts) == 0:
+            raise Exception("Parts пустой")
+        
+        part = parts[0]
+        if "inline_data" not in part:
+            raise Exception(f"Отсутствует 'inline_data' в part: {part}")
+        
+        if "data" not in part["inline_data"]:
+            raise Exception(f"Отсутствует 'data' в inline_data: {part['inline_data']}")
+        
+        base64_response = part["inline_data"]["data"]
         data_url = f"data:image/jpeg;base64,{base64_response}"
         
         return data_url

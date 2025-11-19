@@ -380,10 +380,10 @@ if st.session_state.analysis:
             "Выберите стили (можно несколько)",
             ["Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прованс", "Нейтральный"],
             default=st.session_state.selected_styles,
-            help="Выберите хотя бы один стиль для создания дизайна"
+            help="Выберите хотя бы один стиль для создания дизайна",
+            key="styles_multiselect"
         )
-        if styles:
-            st.session_state.selected_styles = styles
+        st.session_state.selected_styles = styles
     
     with col2:
         main_color = st.color_picker("Основной цвет", st.session_state.selected_color, key="color_select")

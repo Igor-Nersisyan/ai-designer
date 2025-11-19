@@ -84,10 +84,14 @@ def call_gemini(system_prompt: str, user_prompt: str) -> str:
             )
         )
         
+        if not response or not hasattr(response, 'text'):
+            raise Exception("Некорректный ответ от Gemini API")
+        
         content = response.text
-        if not content:
+        if not content or content.strip() == "":
             raise Exception("Пустой ответ от Gemini")
-        return content
+        
+        return content.strip()
     except Exception as e:
         raise Exception(f"Ошибка Gemini: {str(e)}")
 

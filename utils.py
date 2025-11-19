@@ -80,18 +80,32 @@ def call_gemini(system_prompt: str, user_prompt: str) -> str:
             contents=full_prompt,
             config=types.GenerateContentConfig(
                 temperature=0.7,
-                max_output_tokens=2000,
+                max_output_tokens=8000,
             )
         )
         
-        if not response or not hasattr(response, 'text'):
-            raise Exception("Некорректный ответ от Gemini API")
+        if not response:
+            raise Exception("Не получен ответ от Gemini API")
         
-        content = response.text
-        if not content or content.strip() == "":
+        content = None
+        
+        if hasattr(response, 'text') and response.text and response.text.strip():
+            content = response.text.strip()
+        elif hasattr(response, 'candidates') and response.candidates:
+            candidate = response.candidates[0]
+            if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                parts = candidate.content.parts
+                text_parts = []
+                for part in parts:
+                    if hasattr(part, 'text') and part.text:
+                        text_parts.append(part.text)
+                if text_parts:
+                    content = ''.join(text_parts).strip()
+        
+        if not content:
             raise Exception("Пустой ответ от Gemini")
         
-        return content.strip()
+        return content
     except Exception as e:
         raise Exception(f"Ошибка Gemini: {str(e)}")
 

@@ -1,6 +1,6 @@
 # Overview
 
-This AI-powered interior design assistant, built with Streamlit, helps users analyze and reimagine their living spaces. It leverages Google Gemini 2.5 Pro for room analysis and DALL-E 3 for generating photorealistic design visualizations. The application provides professional design feedback, generates design variants, allows side-by-side comparison, offers material shopping lists, estimates renovation costs, and enables saving, loading, and exporting design packages as PDF reports.
+This AI-powered interior design assistant, built with Streamlit, helps users analyze and reimagine their living spaces. It leverages Google Gemini 2.5 Pro for room analysis and Google Gemini 2.5 Flash Image for generating photorealistic design visualizations using image-to-image generation. The application provides professional design feedback, generates design variants, allows side-by-side comparison, offers material shopping lists, estimates renovation costs, and enables saving, loading, and exporting design packages as PDF reports.
 
 # User Preferences
 
@@ -14,7 +14,7 @@ The application uses Streamlit, chosen for rapid prototyping and built-in state 
 ## AI Processing Pipeline
 The application uses a two-stage AI workflow:
 1.  **Analysis Stage** (Google Gemini 2.5 Pro): Analyzes uploaded room images and user input to provide structured design analysis. It processes both image data and text, returning a JSON-formatted analysis.
-2.  **Generation Stage** (DALL-E 3): Converts design recommendations into optimized DALL-E prompts using AI, generating photorealistic interior design visualizations. This stage also includes a refinement step where Gemini Vision analyzes generated designs to improve prompts.
+2.  **Generation Stage** (Google Gemini 2.5 Flash Image): Uses image-to-image generation to transform the uploaded room photo based on design prompts. The function accepts the original room image and a text prompt, converting both to the required format and sending them to the Gemini API. Generated images are returned as base64-encoded data URLs for display. This stage includes a refinement step where Gemini Vision analyzes generated designs to improve prompts.
 
 ## State Management
 `st.session_state` is used for managing application state, storing analysis results, and maintaining data across user interactions to prevent redundant API calls.
@@ -48,9 +48,7 @@ PostgreSQL is used for project persistence, with tables for `projects` (project 
 
 ## Google Cloud Platform
 -   **Google Gemini 2.5 Pro**: Used for multimodal image analysis and refining design prompts.
-
-## OpenAI Platform
--   **DALL-E 3**: Generates photorealistic interior design images.
+-   **Google Gemini 2.5 Flash Image**: Image-to-image generation model that transforms uploaded room photos based on design prompts while preserving structural geometry.
 
 ## Python Libraries
 -   **streamlit**: Web application framework.
@@ -64,4 +62,14 @@ PostgreSQL is used for project persistence, with tables for `projects` (project 
 -   **httpx**: HTTP client.
 
 ## Environment Configuration
-API authentication and database connection strings are managed via environment variables (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `DATABASE_URL`) loaded using `python-dotenv`.
+API authentication and database connection strings are managed via environment variables (`GEMINI_API_KEY`, `DATABASE_URL`) loaded using `python-dotenv`.
+
+# Recent Changes
+
+## November 19, 2025 - Image Generation Migration
+Migrated image generation backend from OpenAI DALL-E 3 to Google Gemini 2.5 Flash Image API. The new implementation:
+- Uses image-to-image generation workflow (source image + prompt)
+- Preserves structural geometry of the original room
+- Returns base64-encoded images as data URLs
+- Maintains compatibility with existing UI and workflow
+- All three generation points updated: initial generation, regeneration, and refinement

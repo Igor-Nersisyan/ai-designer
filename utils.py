@@ -166,13 +166,14 @@ def generate_image(source_image_bytes: bytes, prompt: str) -> str:
             raise Exception("Parts пустой")
         
         part = parts[0]
-        if "inline_data" not in part:
-            raise Exception(f"Отсутствует 'inline_data' в part: {part}")
         
-        if "data" not in part["inline_data"]:
-            raise Exception(f"Отсутствует 'data' в inline_data: {part['inline_data']}")
+        inline_data = part.get("inlineData") or part.get("inline_data")
+        if not inline_data:
+            raise Exception(f"Отсутствует 'inlineData' или 'inline_data' в part: {part}")
         
-        base64_response = part["inline_data"]["data"]
+        base64_response = inline_data.get("data")
+        if not base64_response:
+            raise Exception(f"Отсутствует 'data' в inline_data: {inline_data}")
         data_url = f"data:image/jpeg;base64,{base64_response}"
         
         return data_url

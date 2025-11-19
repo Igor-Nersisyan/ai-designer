@@ -117,23 +117,69 @@ def call_gpt4o(client: OpenAI, system_prompt: str, user_prompt: str) -> str:
             max_tokens=2000,
             temperature=0.7
         )
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        if not content:
+            raise Exception("Пустой ответ от GPT-4o")
+        return content
     except Exception as e:
         raise Exception(f"Ошибка GPT-4o: {str(e)}")
 
-def generate_image(client: OpenAI, prompt: str) -> str:
-    """Генерация изображения через DALL-E 3"""
+def generate_image(source_image_bytes: bytes, prompt: str) -> str:
+    """Генерация изображения через Google Gemini API (gemini-2.5-flash-image)"""
     try:
-        response = client.images.generate(
-            model="dall-e-3",
-            prompt=prompt,
-            size="1024x1792",
-            quality="hd",
-            n=1
-        )
-        return response.data[0].url
+        import requests
+        
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise Exception("GEMINI_API_KEY не найден. Пожалуйста, добавьте API ключ в настройки.")
+        
+        base64_image = base64.b64encode(source_image_bytes).decode('utf-8')
+        
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key={api_key}"
+        
+        headers = {
+            "Content-Type": "application/json"
+        }
+        
+        request_body = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": f"Instruction: {prompt}. Keep geometry and structural elements unchanged. Output ONLY the modified image."
+                        },
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": base64_image
+                            }
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "response_modalities": ["IMAGE"]
+            }
+        }
+        
+        response = requests.post(url, headers=headers, json=request_body, timeout=60)
+        
+        if response.status_code != 200:
+            raise Exception(f"API Error {response.status_code}: {response.text}")
+        
+        response_data = response.json()
+        
+        if "candidates" not in response_data or len(response_data["candidates"]) == 0:
+            raise Exception("Нет кандидатов в ответе API")
+        
+        base64_response = response_data["candidates"][0]["content"]["parts"][0]["inline_data"]["data"]
+        
+        data_url = f"data:image/jpeg;base64,{base64_response}"
+        
+        return data_url
+        
     except Exception as e:
-        raise Exception(f"Ошибка DALL-E 3: {str(e)}")
+        raise Exception(f"Ошибка Gemini Image Generation: {str(e)}")
 
 def refine_design_with_vision(design_image_url: str, original_prompt: str, user_feedback: str) -> str:
     """Доработка дизайна с помощью Gemini Vision - анализирует изображение дизайна и создаёт новый промпт"""

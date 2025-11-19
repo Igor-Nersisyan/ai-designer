@@ -417,10 +417,10 @@ if st.session_state.analysis:
 Основной цвет: {main_color}
 Дополнительно: {additional_preferences}
 
-Создай детальный промпт для DALL-E 3."""
+Создай детальный промпт для генерации изображения."""
                     )
                     
-                    image_url = generate_image(client, dalle_prompt)
+                    image_url = generate_image(st.session_state.uploaded_image_bytes, dalle_prompt)
                     
                     st.session_state.images.append({
                         'url': image_url,
@@ -462,7 +462,7 @@ if st.session_state.images:
                     if st.button("🔄 Перегенерировать", key=f"regen_{idx}", use_container_width=True):
                         with st.spinner("🎨 Генерирую новый вариант..."):
                             try:
-                                new_image_url = generate_image(client, edited_prompt)
+                                new_image_url = generate_image(st.session_state.uploaded_image_bytes, edited_prompt)
                                 st.session_state.images.append({
                                     'url': new_image_url,
                                     'prompt': edited_prompt,
@@ -494,7 +494,7 @@ if st.session_state.images:
                                     feedback
                                 )
                                 
-                                new_image_url = generate_image(client, refined_prompt)
+                                new_image_url = generate_image(st.session_state.uploaded_image_bytes, refined_prompt)
                                 
                                 st.session_state.images.append({
                                     'url': new_image_url,

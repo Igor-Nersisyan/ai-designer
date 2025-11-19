@@ -341,7 +341,10 @@ with st.sidebar:
                     st.session_state.saved_shopping_list = None
                     st.session_state.saved_budget = {}
                 
-                st.session_state.selected_variant_idx = None
+                if len(st.session_state.images) > 0 and recommendations:
+                    st.session_state.selected_variant_idx = 0
+                else:
+                    st.session_state.selected_variant_idx = None
                 
                 st.rerun()
             else:

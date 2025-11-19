@@ -204,9 +204,18 @@ with st.sidebar:
     
     if projects:
         project_options = ["Новый проект"] + [f"{p.name} ({p.room_type})" for p in projects]
+        
+        default_index = 0
+        if st.session_state.current_project_id:
+            for i, p in enumerate(projects):
+                if p.id == st.session_state.current_project_id:
+                    default_index = i + 1
+                    break
+        
         selected_project = st.selectbox(
             "Выберите проект",
             project_options,
+            index=default_index,
             key="project_selector"
         )
         

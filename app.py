@@ -1,10 +1,9 @@
 import streamlit as st
 import base64
-from openai import OpenAI
 from PIL import Image
 import io
 from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_DALLE_ENGINEER
-from utils import encode_image, call_gemini_vision, call_gpt4o, generate_image, refine_design_with_vision
+from utils import encode_image, call_gemini_vision, call_gemini, generate_image, refine_design_with_vision
 import os
 from dotenv import load_dotenv
 from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
@@ -23,8 +22,6 @@ st.set_page_config(
     page_icon="🏠",
     layout="wide"
 )
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 st.markdown("""
 <style>
@@ -374,7 +371,7 @@ if st.session_state.analysis:
     col1, col2 = st.columns([2, 1])
     
     if 'selected_styles' not in st.session_state:
-        st.session_state.selected_styles = ["Скандинавский"]
+        st.session_state.selected_styles = []
     if 'selected_color' not in st.session_state:
         st.session_state.selected_color = "#FFFFFF"
     
@@ -405,8 +402,7 @@ if st.session_state.analysis:
         else:
             with st.spinner("🎨 Создаю дизайн-проект..."):
                 try:
-                    dalle_prompt = call_gpt4o(
-                        client,
+                    dalle_prompt = call_gemini(
                         SYSTEM_PROMPT_DALLE_ENGINEER,
                         f"""Анализ помещения:
 {st.session_state.analysis}

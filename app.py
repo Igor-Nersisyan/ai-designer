@@ -153,6 +153,19 @@ def get_design_image_bytes(design_url: str) -> bytes:
         response = requests.get(design_url, timeout=10)
         return response.content
 
+def save_budget():
+    """Callback для автоматического сохранения бюджета"""
+    st.session_state.saved_budget = {
+        'walls': st.session_state.budget_walls,
+        'floor': st.session_state.budget_floor,
+        'ceiling': st.session_state.budget_ceiling,
+        'furniture': st.session_state.budget_furniture,
+        'lighting': st.session_state.budget_lighting,
+        'decor': st.session_state.budget_decor,
+        'work': st.session_state.budget_work
+    }
+    auto_save_project()
+
 def auto_save_project():
     if not st.session_state.auto_save_enabled or not st.session_state.analysis or not st.session_state.user_id:
         return
@@ -753,13 +766,13 @@ if st.session_state.images:
         with col1:
             st.markdown("### Основные категории расходов")
             
-            walls_budget = st.number_input("Отделка стен (руб)", min_value=0, value=saved_budget.get('walls', 50000), step=5000, key="budget_walls")
-            floor_budget = st.number_input("Напольное покрытие (руб)", min_value=0, value=saved_budget.get('floor', 40000), step=5000, key="budget_floor")
-            ceiling_budget = st.number_input("Потолок (руб)", min_value=0, value=saved_budget.get('ceiling', 30000), step=5000, key="budget_ceiling")
-            furniture_budget = st.number_input("Мебель (руб)", min_value=0, value=saved_budget.get('furniture', 100000), step=10000, key="budget_furniture")
-            lighting_budget = st.number_input("Освещение (руб)", min_value=0, value=saved_budget.get('lighting', 20000), step=5000, key="budget_lighting")
-            decor_budget = st.number_input("Декор (руб)", min_value=0, value=saved_budget.get('decor', 15000), step=5000, key="budget_decor")
-            work_budget = st.number_input("Работы (руб)", min_value=0, value=saved_budget.get('work', 80000), step=10000, key="budget_work")
+            walls_budget = st.number_input("Отделка стен (руб)", min_value=0, value=saved_budget.get('walls', 50000), step=5000, key="budget_walls", on_change=save_budget)
+            floor_budget = st.number_input("Напольное покрытие (руб)", min_value=0, value=saved_budget.get('floor', 40000), step=5000, key="budget_floor", on_change=save_budget)
+            ceiling_budget = st.number_input("Потолок (руб)", min_value=0, value=saved_budget.get('ceiling', 30000), step=5000, key="budget_ceiling", on_change=save_budget)
+            furniture_budget = st.number_input("Мебель (руб)", min_value=0, value=saved_budget.get('furniture', 100000), step=10000, key="budget_furniture", on_change=save_budget)
+            lighting_budget = st.number_input("Освещение (руб)", min_value=0, value=saved_budget.get('lighting', 20000), step=5000, key="budget_lighting", on_change=save_budget)
+            decor_budget = st.number_input("Декор (руб)", min_value=0, value=saved_budget.get('decor', 15000), step=5000, key="budget_decor", on_change=save_budget)
+            work_budget = st.number_input("Работы (руб)", min_value=0, value=saved_budget.get('work', 80000), step=10000, key="budget_work", on_change=save_budget)
         
         with col2:
             st.markdown("### Итоговый бюджет")
@@ -773,51 +786,32 @@ if st.session_state.images:
             st.progress(furniture_budget / total_budget if total_budget > 0 else 0, text=f"Мебель: {furniture_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Мебель: 0%")
             st.progress(work_budget / total_budget if total_budget > 0 else 0, text=f"Работы: {work_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Работы: 0%")
         
-        if st.button("💾 Сохранить бюджет", key="save_budget_btn", use_container_width=True):
-            st.session_state.saved_budget = {
-                'walls': walls_budget,
-                'floor': floor_budget,
-                'ceiling': ceiling_budget,
-                'furniture': furniture_budget,
-                'lighting': lighting_budget,
-                'decor': decor_budget,
-                'work': work_budget
-            }
-            auto_save_project()
-            st.success("✅ Бюджет сохранён!")
-        
         st.divider()
         st.header("📄 Экспорт дизайн-проекта")
         
         st.markdown("Скачайте полный отчёт по дизайн-проекту в формате PDF")
         
-        if st.button("📥 Создать PDF-отчет", type="primary", key="generate_pdf_btn", use_container_width=True):
-            try:
-                with st.spinner("📄 Создаю PDF-отчет..."):
-                    project_data = {
-                        'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
-                        'room_type': st.session_state.room_type,
-                        'purpose': st.session_state.purpose,
-                        'analysis': st.session_state.analysis,
-                        'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
-                        'recommendations': st.session_state.saved_recommendations,
-                        'created_at': datetime.now().strftime('%d.%m.%Y')
-                    }
-                    
-                    pdf_buffer = generate_design_pdf(project_data)
-                    st.session_state.pdf_ready = pdf_buffer
-                    st.session_state.pdf_filename = f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf"
-                    st.success("✅ PDF готов! Нажмите кнопку ниже для скачивания")
-            except Exception as e:
-                st.error(f"Ошибка при создании PDF: {str(e)}")
-                st.error("Пожалуйста, попробуйте ещё раз или проверьте, что все данные заполнены.")
-        
-        if st.session_state.get('pdf_ready'):
+        try:
+            project_data = {
+                'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
+                'room_type': st.session_state.room_type,
+                'purpose': st.session_state.purpose,
+                'analysis': st.session_state.analysis,
+                'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
+                'recommendations': st.session_state.saved_recommendations,
+                'created_at': datetime.now().strftime('%d.%m.%Y')
+            }
+            
+            pdf_buffer = generate_design_pdf(project_data)
+            
             st.download_button(
-                label="💾 Скачать PDF",
-                data=st.session_state.pdf_ready,
-                file_name=st.session_state.pdf_filename,
+                label="📥 Скачать PDF-отчет",
+                data=pdf_buffer,
+                file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
                 mime="application/pdf",
                 key="download_pdf_btn",
                 use_container_width=True
             )
+        except Exception as e:
+            st.error(f"Ошибка при создании PDF: {str(e)}")
+            st.error("Пожалуйста, убедитесь, что все данные заполнены.")

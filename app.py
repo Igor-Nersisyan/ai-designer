@@ -756,9 +756,11 @@ if st.session_state.images:
             st.divider()
             st.header("📄 Экспорт дизайн-проекта")
             
-            if st.button("📥 Генерировать и скачать PDF-отчет", key="generate_pdf_btn", use_container_width=True, type="primary"):
-                with st.spinner("📄 Генерирую PDF-отчет..."):
-                    try:
+            try:
+                pdf_key = f"pdf_{st.session_state.current_project_id}_{st.session_state.selected_variant_idx}"
+                
+                if pdf_key not in st.session_state:
+                    with st.spinner("📄 Генерирую PDF-отчет..."):
                         project_data = {
                             'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
                             'room_type': st.session_state.room_type,
@@ -769,21 +771,18 @@ if st.session_state.images:
                             'created_at': datetime.now().strftime('%d.%m.%Y')
                         }
                         
-                        pdf_buffer = generate_design_pdf(project_data)
-                        st.session_state.pdf_generated = pdf_buffer
-                        st.success("✅ PDF-отчет сгенерирован!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Ошибка при создании PDF: {str(e)}")
-                        import traceback
-                        st.code(traceback.format_exc())
-            
-            if st.session_state.get('pdf_generated'):
+                        st.session_state[pdf_key] = generate_design_pdf(project_data)
+                
                 st.download_button(
-                    label="💾 Скачать PDF-отчет",
-                    data=st.session_state.pdf_generated,
+                    label="📥 Скачать PDF-отчет",
+                    data=st.session_state[pdf_key],
                     file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
                     mime="application/pdf",
                     key="download_pdf_btn",
-                    use_container_width=True
+                    use_container_width=True,
+                    type="primary"
                 )
+            except Exception as e:
+                st.error(f"Ошибка при создании PDF: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())

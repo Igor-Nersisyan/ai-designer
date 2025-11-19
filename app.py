@@ -4,7 +4,7 @@ from openai import OpenAI
 from PIL import Image
 import io
 from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_DALLE_ENGINEER
-from utils import encode_image, call_gpt4o_vision, call_gpt4o, generate_image
+from utils import encode_image, call_gemini_vision, call_gpt4o, generate_image
 import os
 from dotenv import load_dotenv
 from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
@@ -321,6 +321,8 @@ with st.sidebar:
     if uploaded_file:
         image = Image.open(uploaded_file)
         st.image(image, caption="Загруженное фото", use_container_width=True)
+        uploaded_file.seek(0)
+        st.session_state.uploaded_image_bytes = uploaded_file.getvalue()
         st.session_state.uploaded_image_b64 = encode_image(uploaded_file)
     
     purpose = st.text_area(
@@ -347,11 +349,10 @@ if analyze_button and uploaded_file:
     
     with st.spinner("🔍 Анализирую помещение..."):
         try:
-            analysis = call_gpt4o_vision(
-                client,
+            analysis = call_gemini_vision(
                 SYSTEM_PROMPT_ANALYZER,
                 f"Тип помещения: {room_type}\nЦель использования: {purpose}",
-                st.session_state.uploaded_image_b64
+                st.session_state.uploaded_image_bytes
             )
             st.session_state.analysis = analysis
             auto_save_project()

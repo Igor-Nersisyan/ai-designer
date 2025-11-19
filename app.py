@@ -756,29 +756,34 @@ if st.session_state.images:
             st.divider()
             st.header("📄 Экспорт дизайн-проекта")
             
-            try:
-                project_data = {
-                    'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
-                    'room_type': st.session_state.room_type,
-                    'purpose': st.session_state.purpose,
-                    'analysis': st.session_state.analysis,
-                    'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
-                    'recommendations': st.session_state.saved_recommendations,
-                    'created_at': datetime.now().strftime('%d.%m.%Y')
-                }
-                
-                pdf_buffer = generate_design_pdf(project_data)
-                
+            if st.button("📥 Генерировать и скачать PDF-отчет", key="generate_pdf_btn", use_container_width=True, type="primary"):
+                with st.spinner("📄 Генерирую PDF-отчет..."):
+                    try:
+                        project_data = {
+                            'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
+                            'room_type': st.session_state.room_type,
+                            'purpose': st.session_state.purpose,
+                            'analysis': st.session_state.analysis,
+                            'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
+                            'recommendations': st.session_state.saved_recommendations,
+                            'created_at': datetime.now().strftime('%d.%m.%Y')
+                        }
+                        
+                        pdf_buffer = generate_design_pdf(project_data)
+                        st.session_state.pdf_generated = pdf_buffer
+                        st.success("✅ PDF-отчет сгенерирован!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Ошибка при создании PDF: {str(e)}")
+                        import traceback
+                        st.code(traceback.format_exc())
+            
+            if st.session_state.get('pdf_generated'):
                 st.download_button(
-                    label="📥 Скачать PDF-отчет",
-                    data=pdf_buffer,
+                    label="💾 Скачать PDF-отчет",
+                    data=st.session_state.pdf_generated,
                     file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
                     mime="application/pdf",
                     key="download_pdf_btn",
-                    use_container_width=True,
-                    type="primary"
+                    use_container_width=True
                 )
-            except Exception as e:
-                st.error(f"Ошибка при создании PDF: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())

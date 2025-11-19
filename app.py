@@ -751,38 +751,3 @@ if st.session_state.images:
                     st.rerun()
                 except Exception as e:
                     st.error(f"Ошибка при создании списка: {str(e)}")
-        
-        if st.session_state.saved_recommendations:
-            st.divider()
-            st.header("📄 Экспорт дизайн-проекта")
-            
-            if st.button("📥 Генерировать PDF-отчет", key="gen_pdf_btn", use_container_width=True, type="primary"):
-                with st.spinner("Генерирую PDF-отчет..."):
-                    try:
-                        project_data = {
-                            'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
-                            'room_type': st.session_state.room_type,
-                            'purpose': st.session_state.purpose,
-                            'analysis': st.session_state.analysis,
-                            'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
-                            'recommendations': st.session_state.saved_recommendations,
-                            'created_at': datetime.now().strftime('%d.%m.%Y')
-                        }
-                        
-                        pdf_buffer = generate_design_pdf(project_data)
-                        st.session_state.generated_pdf = pdf_buffer.getvalue()
-                        st.success("✅ PDF готов!")
-                    except Exception as e:
-                        st.error(f"Ошибка при создании PDF: {str(e)}")
-                        import traceback
-                        st.code(traceback.format_exc())
-            
-            if st.session_state.get('generated_pdf'):
-                st.download_button(
-                    label="💾 Скачать PDF",
-                    data=st.session_state.generated_pdf,
-                    file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
-                    mime="application/pdf",
-                    key="download_pdf_btn",
-                    use_container_width=True
-                )

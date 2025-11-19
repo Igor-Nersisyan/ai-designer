@@ -416,19 +416,28 @@ if st.session_state.analysis:
         else:
             with st.spinner("🎨 Создаю дизайн-проект..."):
                 try:
-                    dalle_prompt = call_gemini(
+                    raw_prompt = call_gemini(
                         SYSTEM_PROMPT_DALLE_ENGINEER,
-                        f"""Анализ помещения:
+                        f"""Room analysis:
 {st.session_state.analysis}
 
-Тип помещения: {st.session_state.room_type}
-Цель: {st.session_state.purpose}
-Стили: {', '.join(styles)}
-Основной цвет: {main_color}
-Дополнительно: {additional_preferences}
+Room type: {st.session_state.room_type}
+Purpose: {st.session_state.purpose}
+Styles: {', '.join(styles)}
+Accent color: {main_color}
+Additional preferences: {additional_preferences if additional_preferences else 'none'}
 
-Создай детальный промпт для генерации изображения."""
+Create the prompt now."""
                     )
+                    
+                    import re
+                    dalle_prompt = raw_prompt
+                    if "Transform" in raw_prompt:
+                        match = re.search(r'(Transform.*)', raw_prompt, re.DOTALL)
+                        if match:
+                            dalle_prompt = match.group(1).strip()
+                    
+                    dalle_prompt = dalle_prompt.replace('\n\n', ' ').replace('\n', ' ').strip()
                     
                     image_url = generate_image(st.session_state.uploaded_image_bytes, dalle_prompt)
                     

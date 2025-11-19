@@ -1,7 +1,6 @@
 import base64
 import json
 import os
-from openai import OpenAI
 from google import genai
 from google.genai import types
 
@@ -63,66 +62,34 @@ def call_gemini_vision(system_prompt: str, user_text: str, image_bytes: bytes) -
     except Exception as e:
         raise Exception(f"Ошибка Gemini Vision: {str(e)}")
 
-def call_gpt4o_vision(client: OpenAI, system_prompt: str, user_text: str, image_base64: str) -> str:
-    """Вызов GPT-4o Vision для анализа изображения. Возвращает только поле 'analysis' из JSON-ответа."""
+def call_gemini(system_prompt: str, user_prompt: str) -> str:
+    """Обычный вызов Gemini для текста"""
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": user_text},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{image_base64}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            response_format={"type": "json_object"},
-            max_tokens=2000,
-            temperature=0.7
-        )
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise Exception("GEMINI_API_KEY не найден. Пожалуйста, добавьте API ключ в настройки.")
         
-        raw_content = response.choices[0].message.content
+        client = genai.Client(api_key=api_key)
         
-        if not raw_content:
-            raise Exception("Пустой ответ от GPT-4o Vision")
-        
-        try:
-            parsed_json = json.loads(raw_content)
-            if "analysis" in parsed_json:
-                return parsed_json["analysis"]
-            else:
-                return raw_content
-        except json.JSONDecodeError:
-            return raw_content
-            
-    except Exception as e:
-        raise Exception(f"Ошибка GPT-4o Vision: {str(e)}")
+        full_prompt = f"""{system_prompt}
 
-def call_gpt4o(client: OpenAI, system_prompt: str, user_prompt: str) -> str:
-    """Обычный вызов GPT-4o для текста"""
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=2000,
-            temperature=0.7
+{user_prompt}"""
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-pro",
+            contents=full_prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.7,
+                max_output_tokens=2000,
+            )
         )
-        content = response.choices[0].message.content
+        
+        content = response.text
         if not content:
-            raise Exception("Пустой ответ от GPT-4o")
+            raise Exception("Пустой ответ от Gemini")
         return content
     except Exception as e:
-        raise Exception(f"Ошибка GPT-4o: {str(e)}")
+        raise Exception(f"Ошибка Gemini: {str(e)}")
 
 def generate_image(source_image_bytes: bytes, prompt: str) -> str:
     """Генерация изображения через Google Gemini API (gemini-2.5-flash-image)"""

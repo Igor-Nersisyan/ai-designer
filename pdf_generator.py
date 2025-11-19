@@ -81,8 +81,8 @@ def generate_design_pdf(project_data):
         img_data = BytesIO(response.content)
         pil_img = Image.open(img_data)
         
-        max_width = 12*cm
-        max_height = 12*cm
+        max_width = 14*cm
+        max_height = 14*cm
         
         aspect = pil_img.width / pil_img.height
         

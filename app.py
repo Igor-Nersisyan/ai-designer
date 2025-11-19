@@ -756,33 +756,26 @@ if st.session_state.images:
             st.divider()
             st.header("📄 Экспорт дизайн-проекта")
             
-            try:
-                pdf_key = f"pdf_{st.session_state.current_project_id}_{st.session_state.selected_variant_idx}"
-                
-                if pdf_key not in st.session_state:
-                    with st.spinner("📄 Генерирую PDF-отчет..."):
-                        project_data = {
-                            'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
-                            'room_type': st.session_state.room_type,
-                            'purpose': st.session_state.purpose,
-                            'analysis': st.session_state.analysis,
-                            'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
-                            'recommendations': st.session_state.saved_recommendations,
-                            'created_at': datetime.now().strftime('%d.%m.%Y')
-                        }
-                        
-                        st.session_state[pdf_key] = generate_design_pdf(project_data)
-                
-                st.download_button(
-                    label="📥 Скачать PDF-отчет",
-                    data=st.session_state[pdf_key],
-                    file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
-                    mime="application/pdf",
-                    key="download_pdf_btn",
-                    use_container_width=True,
-                    type="primary"
-                )
-            except Exception as e:
-                st.error(f"Ошибка при создании PDF: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
+            if st.button("📥 Скачать PDF-отчет", key="generate_pdf_btn", use_container_width=True, type="primary"):
+                try:
+                    project_data = {
+                        'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
+                        'room_type': st.session_state.room_type,
+                        'purpose': st.session_state.purpose,
+                        'analysis': st.session_state.analysis,
+                        'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
+                        'recommendations': st.session_state.saved_recommendations,
+                        'created_at': datetime.now().strftime('%d.%m.%Y')
+                    }
+                    
+                    pdf_buffer = generate_design_pdf(project_data)
+                    
+                    import base64
+                    b64_pdf = base64.b64encode(pdf_buffer.getvalue()).decode()
+                    href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="dizain_proekt_{datetime.now().strftime("%d_%m_%Y")}.pdf">Нажмите здесь для скачивания PDF</a>'
+                    st.markdown(href, unsafe_allow_html=True)
+                    st.success("✅ PDF-отчет готов! Нажмите на ссылку выше для скачивания.")
+                except Exception as e:
+                    st.error(f"Ошибка при создании PDF: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())

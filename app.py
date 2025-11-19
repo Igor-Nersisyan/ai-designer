@@ -4,7 +4,7 @@ from openai import OpenAI
 from PIL import Image
 import io
 from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_DALLE_ENGINEER
-from utils import encode_image, call_gemini_vision, call_gpt4o, generate_image
+from utils import encode_image, call_gemini_vision, call_gpt4o, generate_image, refine_design_with_vision
 import os
 from dotenv import load_dotenv
 from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
@@ -380,9 +380,10 @@ if st.session_state.analysis:
             "Выберите стили (можно несколько)",
             ["Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прованс", "Нейтральный"],
             default=st.session_state.selected_styles,
-            key="styles_select"
+            help="Выберите хотя бы один стиль для создания дизайна"
         )
-        st.session_state.selected_styles = styles if styles else st.session_state.selected_styles
+        if styles:
+            st.session_state.selected_styles = styles
     
     with col2:
         main_color = st.color_picker("Основной цвет", st.session_state.selected_color, key="color_select")
@@ -482,17 +483,12 @@ if st.session_state.images:
                 
                 if st.button("🎨 Применить изменения", type="primary", key=f"apply_changes_{idx}", use_container_width=True):
                     if feedback:
-                        with st.spinner("🎨 Дорабатываю дизайн..."):
+                        with st.spinner("🎨 Анализирую дизайн и создаю улучшенную версию..."):
                             try:
-                                refined_prompt = call_gpt4o(
-                                    client,
-                                    SYSTEM_PROMPT_DALLE_ENGINEER,
-                                    f"""Исходный промпт:
-{img_data['prompt']}
-
-Фидбэк пользователя: {feedback}
-
-Создай НОВЫЙ промпт для DALL-E 3, учитывая фидбэк. Ответь ТОЛЬКО промптом."""
+                                refined_prompt = refine_design_with_vision(
+                                    img_data['url'],
+                                    img_data['prompt'],
+                                    feedback
                                 )
                                 
                                 new_image_url = generate_image(client, refined_prompt)

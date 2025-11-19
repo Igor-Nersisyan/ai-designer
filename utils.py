@@ -127,3 +127,59 @@ def generate_image(client: OpenAI, prompt: str) -> str:
         return response.data[0].url
     except Exception as e:
         raise Exception(f"Ошибка DALL-E 3: {str(e)}")
+
+def refine_design_with_vision(design_image_url: str, original_prompt: str, user_feedback: str) -> str:
+    """Доработка дизайна с помощью Gemini Vision - анализирует изображение дизайна и создаёт новый промпт"""
+    try:
+        import requests
+        from io import BytesIO
+        
+        response = requests.get(design_image_url, timeout=10)
+        image_bytes = response.content
+        
+        client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        
+        system_prompt = """Ты — эксперт по промпт-инженерингу для DALL-E 3. 
+Твоя задача — проанализировать изображение дизайна интерьера и пожелания пользователя, 
+а затем создать НОВЫЙ, улучшенный промпт для DALL-E 3.
+
+Промпт должен:
+1. Сохранять общую концепцию и стиль исходного дизайна
+2. Учитывать все пожелания пользователя
+3. Быть детальным и описательным
+4. Быть на английском языке
+5. Содержать фразу "interior design photography" для лучших результатов
+
+Верни ТОЛЬКО новый промпт для DALL-E 3, без дополнительных пояснений."""
+        
+        user_text = f"""Исходный промпт который создал этот дизайн:
+{original_prompt}
+
+Пожелания пользователя по доработке:
+{user_feedback}
+
+Проанализируй изображение дизайна и создай НОВЫЙ промпт для DALL-E 3, который учтёт пожелания пользователя."""
+        
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-exp",
+            contents=[
+                types.Part.from_bytes(
+                    data=image_bytes,
+                    mime_type="image/jpeg",
+                ),
+                f"{system_prompt}\n\n{user_text}"
+            ],
+            config=types.GenerateContentConfig(
+                temperature=0.7,
+            )
+        )
+        
+        refined_prompt = response.text
+        
+        if not refined_prompt:
+            raise Exception("Пустой ответ от Gemini Vision при доработке дизайна")
+        
+        return refined_prompt.strip()
+            
+    except Exception as e:
+        raise Exception(f"Ошибка при доработке дизайна с Gemini Vision: {str(e)}")

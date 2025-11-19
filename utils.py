@@ -62,6 +62,63 @@ def call_gemini_vision(system_prompt: str, user_text: str, image_bytes: bytes) -
     except Exception as e:
         raise Exception(f"Ошибка Gemini Vision: {str(e)}")
 
+def call_gemini_vision_markdown(system_prompt: str, user_text: str, image_bytes: bytes) -> str:
+    """Вызов Gemini Pro Vision для анализа изображения. Возвращает обычный Markdown текст."""
+    try:
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise Exception("GEMINI_API_KEY не найден. Пожалуйста, добавьте API ключ в настройки.")
+        
+        if not image_bytes:
+            raise Exception("Изображение не загружено. Пожалуйста, загрузите фото помещения.")
+        
+        client = genai.Client(api_key=api_key)
+        
+        full_prompt = f"""{system_prompt}
+
+{user_text}"""
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-pro",
+            contents=[
+                types.Part.from_bytes(
+                    data=image_bytes,
+                    mime_type="image/jpeg",
+                ),
+                full_prompt
+            ],
+            config=types.GenerateContentConfig(
+                temperature=0.7,
+                max_output_tokens=8000,
+            )
+        )
+        
+        if not response:
+            raise Exception("Не получен ответ от Gemini Vision API")
+        
+        content = None
+        
+        if hasattr(response, 'text') and response.text and response.text.strip():
+            content = response.text.strip()
+        elif hasattr(response, 'candidates') and response.candidates:
+            candidate = response.candidates[0]
+            if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                parts = candidate.content.parts
+                text_parts = []
+                for part in parts:
+                    if hasattr(part, 'text') and part.text:
+                        text_parts.append(part.text)
+                if text_parts:
+                    content = ''.join(text_parts).strip()
+        
+        if not content:
+            raise Exception("Пустой ответ от Gemini Vision")
+        
+        return content
+            
+    except Exception as e:
+        raise Exception(f"Ошибка Gemini Vision: {str(e)}")
+
 def call_gemini(system_prompt: str, user_prompt: str) -> str:
     """Обычный вызов Gemini для текста"""
     try:

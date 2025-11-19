@@ -3,7 +3,7 @@ import base64
 from PIL import Image
 import io
 from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_DALLE_ENGINEER
-from utils import encode_image, call_gemini_vision, call_gemini, generate_image, refine_design_with_vision
+from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision
 import os
 from dotenv import load_dotenv
 from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
@@ -624,7 +624,7 @@ if st.session_state.images:
             
             with st.spinner("📝 Формирую рекомендации..."):
                 try:
-                    recommendations = call_gemini_vision(
+                    recommendations = call_gemini_vision_markdown(
                         """Ты — эксперт по дизайну интерьеров и материалам отделки. 
 Проанализируй изображение итогового дизайна и дай детальные рекомендации по:
 1. Отделке стен (материалы, цвета, текстуры)
@@ -660,7 +660,7 @@ if st.session_state.images:
             
             with st.spinner("📝 Формирую рекомендации..."):
                 try:
-                    recommendations = call_gemini_vision(
+                    recommendations = call_gemini_vision_markdown(
                         """Ты — эксперт по дизайну интерьеров и материалам отделки. 
 Проанализируй изображение итогового дизайна и дай детальные рекомендации по:
 1. Отделке стен (материалы, цвета, текстуры)
@@ -700,7 +700,7 @@ if st.session_state.images:
             
             with st.spinner("🛒 Создаю список покупок..."):
                 try:
-                    shopping_list = call_gemini_vision(
+                    shopping_list = call_gemini_vision_markdown(
                         """Ты — эксперт по закупкам материалов для ремонта. 
 Проанализируй изображение итогового дизайна и создай детальный список покупок с:
 1. Категориями (Отделка стен, Пол, Потолок, Мебель, Освещение, Декор)

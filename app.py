@@ -140,6 +140,16 @@ if 'username' not in st.session_state:
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
 
+def get_design_image_bytes(design_url: str) -> bytes:
+    """Вспомогательная функция для извлечения байтов изображения из URL"""
+    if design_url.startswith('data:image'):
+        header, encoded = design_url.split(',', 1)
+        return base64.b64decode(encoded)
+    else:
+        import requests
+        response = requests.get(design_url, timeout=10)
+        return response.content
+
 def auto_save_project():
     if not st.session_state.auto_save_enabled or not st.session_state.analysis or not st.session_state.user_id:
         return
@@ -609,11 +619,14 @@ if st.session_state.images:
         if st.session_state.get('needs_generation', False):
             st.session_state.needs_generation = False
             
+            selected_design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
+            design_image_bytes = get_design_image_bytes(selected_design_url)
+            
             with st.spinner("📝 Формирую рекомендации..."):
                 try:
-                    recommendations = call_gemini(
+                    recommendations = call_gemini_vision(
                         """Ты — эксперт по дизайну интерьеров и материалам отделки. 
-На основе анализа и выбранного дизайна дай детальные рекомендации по:
+Проанализируй изображение итогового дизайна и дай детальные рекомендации по:
 1. Отделке стен (материалы, цвета, текстуры)
 2. Напольному покрытию (тип, цвет, характеристики)
 3. Потолку (отделка, освещение)
@@ -625,59 +638,31 @@ if st.session_state.images:
                         f"""Тип помещения: {st.session_state.room_type}
 Цель: {st.session_state.purpose}
 
-Анализ:
+Анализ исходного помещения:
 {st.session_state.analysis}
 
-Итоговый дизайн (промпт выбранного варианта):
-{st.session_state.images[st.session_state.selected_variant_idx]['prompt']}
-
-Дай детальные рекомендации."""
+Дай детальные рекомендации по материалам и отделке для этого дизайна.""",
+                        design_image_bytes
                     )
                     st.session_state.saved_recommendations = recommendations
+                    auto_save_project()
                 except Exception as e:
                     st.error(f"Ошибка при генерации рекомендаций: {str(e)}")
                     st.warning("Попробуйте нажать кнопку 'Обновить рекомендации' ниже для повторной генерации")
-            
-            if st.session_state.saved_recommendations:
-                with st.spinner("🛒 Создаю список покупок..."):
-                    try:
-                        shopping_list = call_gemini(
-                            """Ты — эксперт по закупкам материалов для ремонта. Создай детальный список покупок с:
-1. Категориями (Отделка стен, Пол, Потолок, Мебель, Освещение, Декор)
-2. Для каждого товара укажи:
-   - Конкретное название товара и артикул (если возможно)
-   - Описание
-   - Количество
-   - Примерная цена в рублях
-
-Формат ответа:
-### Категория
-1. **Название товара (артикул)** - описание
-   - Количество: X шт/м²/л
-   - Цена: ~X руб""",
-                            f"""Тип помещения: {st.session_state.room_type}
-Рекомендации:
-{st.session_state.saved_recommendations}
-
-Создай список покупок."""
-                        )
-                        st.session_state.saved_shopping_list = shopping_list
-                    except Exception as e:
-                        st.error(f"Ошибка при создании списка покупок: {str(e)}")
-            
-            auto_save_project()
-            st.rerun()
         
         st.subheader("💡 Детальные рекомендации по материалам")
         if st.session_state.saved_recommendations:
             st.markdown(st.session_state.saved_recommendations)
         
         if st.button("📝 Обновить рекомендации", key="get_recommendations"):
+            selected_design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
+            design_image_bytes = get_design_image_bytes(selected_design_url)
+            
             with st.spinner("📝 Формирую рекомендации..."):
                 try:
-                    recommendations = call_gemini(
+                    recommendations = call_gemini_vision(
                         """Ты — эксперт по дизайну интерьеров и материалам отделки. 
-На основе анализа и выбранного дизайна дай детальные рекомендации по:
+Проанализируй изображение итогового дизайна и дай детальные рекомендации по:
 1. Отделке стен (материалы, цвета, текстуры)
 2. Напольному покрытию (тип, цвет, характеристики)
 3. Потолку (отделка, освещение)
@@ -689,18 +674,16 @@ if st.session_state.images:
                         f"""Тип помещения: {st.session_state.room_type}
 Цель: {st.session_state.purpose}
 
-Анализ:
+Анализ исходного помещения:
 {st.session_state.analysis}
 
-Итоговый дизайн (промпт выбранного варианта):
-{st.session_state.images[st.session_state.selected_variant_idx]['prompt']}
-
-Дай детальные рекомендации."""
+Дай детальные рекомендации по материалам и отделке для этого дизайна.""",
+                        design_image_bytes
                     )
                     
                     st.session_state.saved_recommendations = recommendations
                     auto_save_project()
-                    st.markdown(recommendations)
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Ошибка при формировании рекомендаций: {str(e)}")
                     st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
@@ -712,10 +695,14 @@ if st.session_state.images:
             st.markdown(st.session_state.saved_shopping_list)
         
         if st.button("📝 Создать список покупок", key="generate_shopping_list"):
+            selected_design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
+            design_image_bytes = get_design_image_bytes(selected_design_url)
+            
             with st.spinner("🛒 Создаю список покупок..."):
                 try:
-                    shopping_list = call_gemini(
-                        """Ты — эксперт по закупкам материалов для ремонта. Создай детальный список покупок с:
+                    shopping_list = call_gemini_vision(
+                        """Ты — эксперт по закупкам материалов для ремонта. 
+Проанализируй изображение итогового дизайна и создай детальный список покупок с:
 1. Категориями (Отделка стен, Пол, Потолок, Мебель, Освещение, Декор)
 2. Для каждого товара укажи:
    - Конкретное название товара и артикул (если возможно)
@@ -729,14 +716,16 @@ if st.session_state.images:
    - Количество: X шт/м²/л
    - Цена: ~X руб""",
                         f"""Тип помещения: {st.session_state.room_type}
-Рекомендации:
-{st.session_state.saved_recommendations if st.session_state.saved_recommendations else st.session_state.analysis}
 
-Создай список покупок."""
+Рекомендации по материалам:
+{st.session_state.saved_recommendations if st.session_state.saved_recommendations else 'Используй анализ изображения'}
+
+Создай детальный список покупок для реализации этого дизайна.""",
+                        design_image_bytes
                     )
                     st.session_state.saved_shopping_list = shopping_list
                     auto_save_project()
-                    st.markdown(shopping_list)
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Ошибка при создании списка: {str(e)}")
         

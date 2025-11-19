@@ -212,8 +212,10 @@ def auto_save_project():
             existing_rec = db.query(Recommendation).filter(Recommendation.project_id == project.id).first()
             budget_json = json.dumps(st.session_state.get('saved_budget', {})) if st.session_state.get('saved_budget') else None
             if existing_rec:
-                existing_rec.content = st.session_state.saved_recommendations or existing_rec.content
-                existing_rec.shopping_list = st.session_state.saved_shopping_list
+                if st.session_state.saved_recommendations:
+                    existing_rec.content = st.session_state.saved_recommendations
+                if st.session_state.saved_shopping_list:
+                    existing_rec.shopping_list = st.session_state.saved_shopping_list
                 if budget_json:
                     existing_rec.budget_data = budget_json
             else:
@@ -227,6 +229,7 @@ def auto_save_project():
         
         db.commit()
     except Exception as e:
+        print(f"Ошибка при автосохранении: {e}")
         db.rollback()
     finally:
         db.close()
@@ -673,7 +676,9 @@ if st.session_state.images:
                         design_image_bytes
                     )
                     st.session_state.saved_recommendations = recommendations
+                    st.session_state.needs_generation = False
                     auto_save_project()
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Ошибка при генерации рекомендаций: {str(e)}")
                     st.warning("Попробуйте нажать кнопку 'Обновить рекомендации' ниже для повторной генерации")

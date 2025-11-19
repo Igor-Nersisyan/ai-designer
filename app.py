@@ -23,55 +23,78 @@ st.set_page_config(
     layout="wide"
 )
 
-st.markdown("""
+theme_css = ""
+if st.session_state.get('theme') == 'light':
+    theme_css = """
+    .stApp {
+        background-color: #ffffff;
+        color: #1f1f1f;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+    }
+    [data-testid="stMarkdownContainer"] {
+        color: #1f1f1f;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: #1f1f1f !important;
+    }
+    .stTextInput input, .stTextArea textarea, .stSelectbox select {
+        background-color: #ffffff;
+        color: #1f1f1f;
+    }
+    """
+
+st.markdown(f"""
 <style>
-.stButton>button {
+{theme_css}
+.stButton>button {{
     width: 100%;
     border-radius: 8px;
     height: 3em;
     font-weight: 600;
-}
-.main .block-container {
+}}
+.main .block-container {{
     max-width: 1400px;
     padding: 2rem;
-}
-h1 {
+}}
+h1 {{
     color: #1f1f1f;
     margin-bottom: 2rem;
-}
-.uploaded-image {
+}}
+.uploaded-image {{
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-.generated-image {
+}}
+.generated-image {{
     border-radius: 12px;
     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     margin-bottom: 1rem;
-}
-[data-testid="stFileUploader"] {
+}}
+[data-testid="stFileUploader"] {{
     min-height: auto;
-}
-[data-testid="stFileUploader"] section {
+}}
+[data-testid="stFileUploader"] section {{
     padding: 1.5rem !important;
     min-height: auto !important;
-}
-[data-testid="stFileUploader"] section small {
+}}
+[data-testid="stFileUploader"] section small {{
     font-size: 0 !important;
-}
-[data-testid="stFileUploader"] section small::before {
+}}
+[data-testid="stFileUploader"] section small::before {{
     content: "Перетащите файл сюда или нажмите для выбора" !important;
     font-size: 0.9rem !important;
     display: block !important;
     text-align: center;
-}
-[data-testid="stFileUploader"] section small::after {
+}}
+[data-testid="stFileUploader"] section small::after {{
     content: "Макс. размер: 200MB" !important;
     font-size: 0.75rem !important;
     display: block !important;
     text-align: center;
     color: #999;
     margin-top: 0.25rem;
-}
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -101,6 +124,8 @@ if 'user_id' not in st.session_state:
     st.session_state.user_id = None
 if 'username' not in st.session_state:
     st.session_state.username = None
+if 'theme' not in st.session_state:
+    st.session_state.theme = 'dark'
 
 def auto_save_project():
     if not st.session_state.auto_save_enabled or not st.session_state.analysis or not st.session_state.user_id:
@@ -185,10 +210,15 @@ if not st.session_state.user_id:
     
     st.stop()
 
-col1, col2 = st.columns([5, 1])
+col1, col2, col3 = st.columns([4, 1, 1])
 with col1:
     st.markdown(f"**Пользователь:** {st.session_state.username}")
 with col2:
+    theme_icon = "🌙" if st.session_state.theme == 'light' else "☀️"
+    if st.button(f"{theme_icon} Тема", key="theme_btn"):
+        st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
+        st.rerun()
+with col3:
     if st.button("Выйти", key="logout_btn"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]

@@ -187,8 +187,12 @@ def refine_design_with_vision(design_image_url: str, original_prompt: str, user_
         import requests
         from io import BytesIO
         
-        response = requests.get(design_image_url, timeout=10)
-        image_bytes = response.content
+        if design_image_url.startswith('data:image'):
+            header, encoded = design_image_url.split(',', 1)
+            image_bytes = base64.b64decode(encoded)
+        else:
+            response = requests.get(design_image_url, timeout=10)
+            image_bytes = response.content
         
         client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
         

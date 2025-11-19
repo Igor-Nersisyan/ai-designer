@@ -32,7 +32,7 @@ def call_gemini_vision(system_prompt: str, user_text: str, image_bytes: bytes) -
 }}"""
         
         response = client.models.generate_content(
-            model="gemini-1.5-pro",
+            model="gemini-2.5-pro",
             contents=[
                 types.Part.from_bytes(
                     data=image_bytes,
@@ -168,7 +168,7 @@ def refine_design_with_vision(design_image_url: str, original_prompt: str, user_
 Проанализируй изображение дизайна и создай НОВЫЙ промпт для DALL-E 3, который учтёт пожелания пользователя."""
         
         response = client.models.generate_content(
-            model="gemini-1.5-pro",
+            model="gemini-2.5-pro",
             contents=[
                 types.Part.from_bytes(
                     data=image_bytes,

@@ -1,6 +1,6 @@
 # Overview
 
-This AI-powered interior design assistant, built with Streamlit, helps users analyze and reimagine their living spaces. It leverages Google Gemini 2.0 Flash Experimental for room analysis and DALL-E 3 for generating photorealistic design visualizations. The application provides professional design feedback, generates design variants, allows side-by-side comparison, offers material shopping lists, estimates renovation costs, and enables saving, loading, and exporting design packages as PDF reports.
+This AI-powered interior design assistant, built with Streamlit, helps users analyze and reimagine their living spaces. It leverages Google Gemini 2.5 Pro for room analysis and DALL-E 3 for generating photorealistic design visualizations. The application provides professional design feedback, generates design variants, allows side-by-side comparison, offers material shopping lists, estimates renovation costs, and enables saving, loading, and exporting design packages as PDF reports.
 
 # User Preferences
 
@@ -13,7 +13,7 @@ The application uses Streamlit, chosen for rapid prototyping and built-in state 
 
 ## AI Processing Pipeline
 The application uses a two-stage AI workflow:
-1.  **Analysis Stage** (Google Gemini 2.0 Flash Experimental): Analyzes uploaded room images and user input to provide structured design analysis. It processes both image data and text, returning a JSON-formatted analysis.
+1.  **Analysis Stage** (Google Gemini 2.5 Pro): Analyzes uploaded room images and user input to provide structured design analysis. It processes both image data and text, returning a JSON-formatted analysis.
 2.  **Generation Stage** (DALL-E 3): Converts design recommendations into optimized DALL-E prompts using AI, generating photorealistic interior design visualizations. This stage also includes a refinement step where Gemini Vision analyzes generated designs to improve prompts.
 
 ## State Management
@@ -47,7 +47,7 @@ PostgreSQL is used for project persistence, with tables for `projects` (project 
 # External Dependencies
 
 ## Google Cloud Platform
--   **Google Gemini 2.0 Flash Experimental**: Used for multimodal image analysis and refining design prompts.
+-   **Google Gemini 2.5 Pro**: Used for multimodal image analysis and refining design prompts.
 
 ## OpenAI Platform
 -   **DALL-E 3**: Generates photorealistic interior design images.

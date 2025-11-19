@@ -153,19 +153,6 @@ def get_design_image_bytes(design_url: str) -> bytes:
         response = requests.get(design_url, timeout=10)
         return response.content
 
-def save_budget():
-    """Callback для автоматического сохранения бюджета"""
-    st.session_state.saved_budget = {
-        'walls': st.session_state.budget_walls,
-        'floor': st.session_state.budget_floor,
-        'ceiling': st.session_state.budget_ceiling,
-        'furniture': st.session_state.budget_furniture,
-        'lighting': st.session_state.budget_lighting,
-        'decor': st.session_state.budget_decor,
-        'work': st.session_state.budget_work
-    }
-    auto_save_project()
-
 def auto_save_project():
     if not st.session_state.auto_save_enabled or not st.session_state.analysis or not st.session_state.user_id:
         return
@@ -766,46 +753,24 @@ if st.session_state.images:
                     st.error(f"Ошибка при создании списка: {str(e)}")
         
         st.divider()
-        st.header("💰 Калькулятор бюджета")
-        
-        saved_budget = st.session_state.get('saved_budget', {})
-        
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            st.markdown("### Основные категории расходов")
-            
-            walls_budget = st.number_input("Отделка стен (руб)", min_value=0, value=saved_budget.get('walls', 50000), step=5000, key="budget_walls", on_change=save_budget)
-            floor_budget = st.number_input("Напольное покрытие (руб)", min_value=0, value=saved_budget.get('floor', 40000), step=5000, key="budget_floor", on_change=save_budget)
-            ceiling_budget = st.number_input("Потолок (руб)", min_value=0, value=saved_budget.get('ceiling', 30000), step=5000, key="budget_ceiling", on_change=save_budget)
-            furniture_budget = st.number_input("Мебель (руб)", min_value=0, value=saved_budget.get('furniture', 100000), step=10000, key="budget_furniture", on_change=save_budget)
-            lighting_budget = st.number_input("Освещение (руб)", min_value=0, value=saved_budget.get('lighting', 20000), step=5000, key="budget_lighting", on_change=save_budget)
-            decor_budget = st.number_input("Декор (руб)", min_value=0, value=saved_budget.get('decor', 15000), step=5000, key="budget_decor", on_change=save_budget)
-            work_budget = st.number_input("Работы (руб)", min_value=0, value=saved_budget.get('work', 80000), step=10000, key="budget_work", on_change=save_budget)
-        
-        with col2:
-            st.markdown("### Итоговый бюджет")
-            total_budget = walls_budget + floor_budget + ceiling_budget + furniture_budget + lighting_budget + decor_budget + work_budget
-            st.metric("Общая сумма", f"{total_budget:,.0f} руб")
-            st.metric("С запасом (+ 15%)", f"{total_budget * 1.15:,.0f} руб")
-            
-            st.markdown("### Распределение по категориям")
-            st.progress(walls_budget / total_budget if total_budget > 0 else 0, text=f"Стены: {walls_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Стены: 0%")
-            st.progress(floor_budget / total_budget if total_budget > 0 else 0, text=f"Пол: {floor_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Пол: 0%")
-            st.progress(furniture_budget / total_budget if total_budget > 0 else 0, text=f"Мебель: {furniture_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Мебель: 0%")
-            st.progress(work_budget / total_budget if total_budget > 0 else 0, text=f"Работы: {work_budget / total_budget * 100:.1f}%" if total_budget > 0 else "Работы: 0%")
-        
-        st.divider()
         st.header("📄 Экспорт дизайн-проекта")
         
         st.markdown("Скачайте полный отчёт по дизайн-проекту в формате PDF")
         
-        has_required_data = (
-            st.session_state.get('analysis') and 
-            st.session_state.get('images') and 
-            len(st.session_state.images) > 0 and
-            st.session_state.get('selected_variant_idx') is not None and
-            st.session_state.get('saved_recommendations')
-        )
+        has_analysis = bool(st.session_state.get('analysis'))
+        has_images = bool(st.session_state.get('images')) and len(st.session_state.images) > 0
+        has_variant = st.session_state.get('selected_variant_idx') is not None
+        has_recommendations = bool(st.session_state.get('saved_recommendations'))
+        
+        has_required_data = has_analysis and has_images and has_variant and has_recommendations
+        
+        if not has_required_data:
+            missing = []
+            if not has_analysis: missing.append("анализ помещения")
+            if not has_images: missing.append("дизайн-варианты")
+            if not has_variant: missing.append("выбранный вариант")
+            if not has_recommendations: missing.append("рекомендации")
+            st.warning(f"⚠️ Для PDF не хватает: {', '.join(missing)}")
         
         if has_required_data:
             try:

@@ -12,7 +12,14 @@ def encode_image(uploaded_file):
 def call_gemini_vision(system_prompt: str, user_text: str, image_bytes: bytes) -> str:
     """Вызов Gemini Pro Vision для анализа изображения. Возвращает только поле 'analysis' из JSON-ответа."""
     try:
-        client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise Exception("GEMINI_API_KEY не найден. Пожалуйста, добавьте API ключ в настройки.")
+        
+        if not image_bytes:
+            raise Exception("Изображение не загружено. Пожалуйста, загрузите фото помещения.")
+        
+        client = genai.Client(api_key=api_key)
         
         full_prompt = f"""{system_prompt}
 

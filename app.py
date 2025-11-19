@@ -229,6 +229,9 @@ with st.sidebar:
                 st.session_state.purpose = project.purpose
                 st.session_state.analysis = project.analysis
                 st.session_state.uploaded_image_b64 = project.uploaded_image_b64
+                if project.uploaded_image_b64:
+                    import base64
+                    st.session_state.uploaded_image_bytes = base64.b64decode(project.uploaded_image_b64)
                 st.session_state.auto_save_enabled = True
                 
                 variants = db.query(DesignVariant).filter(DesignVariant.project_id == project.id).all()

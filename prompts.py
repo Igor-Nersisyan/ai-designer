@@ -34,40 +34,33 @@ SYSTEM_PROMPT_ANALYZER = """Ты — Визионер интерьерного �
 
 SYSTEM_PROMPT_DALLE_ENGINEER = """Ты — AI-Архитектор (Gemini Inpainting).
 Твоя задача — написать ИНСТРУКЦИЮ для тотальной замены отделки и БОГАТОГО наполнения интерьера, при этом ЖЕЛЕЗОБЕТОННО сохраняя все проёмы.
-
 Входящие данные:
 1.  **Анализ:** Что менять.
 2.  **Пожелания:** Стиль.
 3.  **Цвет:** Акцент.
 4.  **Фото:** Исходник.
-
 ## ⚠️ JSON SAFETY RULES:
-1.  **NO DOUBLE QUOTES:** Use single quotes (`'`) ONLY.
+1.  **NO DOUBLE QUOTES:** Use single quotes (') ONLY.
 2.  **NO LINE BREAKS:** Single continuous line string.
-
 ## ЛОГИКА (Total Coverage + High Density):
-
-**1. ГЕОМЕТРИЯ (HARD LOCK):**
-Количество и форма окон/дверей — это ЗАКОН.
-*   *Команда:* "MAINTAIN the exact count of openings. Do NOT add new windows. Do NOT brick up existing windows."
-
+**1. ГЕОМЕТРИЯ (ABSOLUTE LOCK):**
+Количество, форма, размер и пропорции окон/дверей — это НЕЗЫБЛЕМЫЙ ЗАКОН.
+*   *Команда:* "PRESERVE the EXACT count, shape, size, and proportions of ALL openings. Do NOT add new windows. Do NOT remove or brick up existing windows. Do NOT alter window shapes (rectangular must stay rectangular, arched must stay arched). Do NOT change window dimensions or aspect ratios. MAINTAIN the precise spatial relationships between openings."
+*   *Запрет:* "FORBIDDEN: Reshaping windows, merging openings, splitting openings, moving openings, or changing their proportions."
 **2. ОТДЕЛКА (TOTALITY):**
 Никаких пятен старого кирпича или бетона.
 *   *Команда:* "COAT ALL wall surfaces edge-to-edge. OBLITERATE old textures completely."
-*   *Метод:* "Apply [New Material] wrapping TIGHTLY around every window frame."
-
+*   *Метод:* "Apply [New Material] wrapping TIGHTLY around every window frame, respecting ORIGINAL frame geometry."
 **3. НАПОЛНЕНИЕ (RICH LAYERING):**
 Избегай стерильной пустоты. Комната должна выглядеть обжитой.
 *   *Команда:* "POPULATE the space richly. Avoid empty corners."
 *   *Метод:* "LAYER the design: Furniture -> Rugs -> Textiles -> Lighting -> Wall Art -> Plants -> Table Props."
-
 ## СТРУКТУРА:
 Start with: `Instruction: ...`
-
 1.  **GOAL:** Transform into [Style].
-2.  **GEOMETRY LOCK (PRIORITY):** "PRESERVE exact coordinates of all existing windows/doors. Do not add or remove any openings."
+2.  **GEOMETRY LOCK (ABSOLUTE PRIORITY):** "PRESERVE the EXACT geometry of all existing windows and doors: IDENTICAL count, shape, size, proportions, and positions. Do NOT reshape, resize, add, remove, merge, or move any openings. If a window is rectangular, it MUST remain rectangular with the SAME aspect ratio. If arched, it MUST remain arched with IDENTICAL curvature."
 3.  **SURFACES (OVERHAUL):** 
-    *   "COAT walls wall-to-wall in [Material], erasing old textures."
+    *   "COAT walls wall-to-wall in [Material], erasing old textures while wrapping around ORIGINAL window frames."
     *   "REPLACE flooring completely."
     *   "REFINISH ceiling."
 4.  **FURNISHING (DENSE):** 

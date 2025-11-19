@@ -791,27 +791,37 @@ if st.session_state.images:
         
         st.markdown("Скачайте полный отчёт по дизайн-проекту в формате PDF")
         
-        try:
-            project_data = {
-                'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
-                'room_type': st.session_state.room_type,
-                'purpose': st.session_state.purpose,
-                'analysis': st.session_state.analysis,
-                'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
-                'recommendations': st.session_state.saved_recommendations,
-                'created_at': datetime.now().strftime('%d.%m.%Y')
-            }
-            
-            pdf_buffer = generate_design_pdf(project_data)
-            
-            st.download_button(
-                label="📥 Скачать PDF-отчет",
-                data=pdf_buffer,
-                file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
-                mime="application/pdf",
-                key="download_pdf_btn",
-                use_container_width=True
-            )
-        except Exception as e:
-            st.error(f"Ошибка при создании PDF: {str(e)}")
-            st.error("Пожалуйста, убедитесь, что все данные заполнены.")
+        has_required_data = (
+            st.session_state.get('analysis') and 
+            st.session_state.get('images') and 
+            len(st.session_state.images) > 0 and
+            st.session_state.get('selected_variant_idx') is not None and
+            st.session_state.get('saved_recommendations')
+        )
+        
+        if has_required_data:
+            try:
+                project_data = {
+                    'name': st.session_state.get('current_project_id', f"Проект {datetime.now().strftime('%d.%m.%Y')}"),
+                    'room_type': st.session_state.room_type,
+                    'purpose': st.session_state.purpose,
+                    'analysis': st.session_state.analysis,
+                    'selected_variant': st.session_state.images[st.session_state.selected_variant_idx],
+                    'recommendations': st.session_state.saved_recommendations,
+                    'created_at': datetime.now().strftime('%d.%m.%Y')
+                }
+                
+                pdf_buffer = generate_design_pdf(project_data)
+                
+                st.download_button(
+                    label="📥 Скачать PDF-отчет",
+                    data=pdf_buffer,
+                    file_name=f"dizain_proekt_{datetime.now().strftime('%d_%m_%Y')}.pdf",
+                    mime="application/pdf",
+                    key="download_pdf_btn",
+                    use_container_width=True
+                )
+            except Exception as e:
+                st.error(f"Ошибка при создании PDF: {str(e)}")
+        else:
+            st.info("💡 Для создания PDF-отчета завершите все шаги: загрузите фото, получите анализ, сгенерируйте дизайн-варианты и получите рекомендации по материалам.")

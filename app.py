@@ -252,7 +252,7 @@ with st.sidebar:
                 
                 st.rerun()
             else:
-                for key in ['current_project_id', 'room_type', 'purpose', 'analysis', 'uploaded_image_b64', 'images', 'saved_recommendations', 'selected_variant_idx']:
+                for key in ['current_project_id', 'room_type', 'purpose', 'analysis', 'uploaded_image_b64', 'uploaded_image_bytes', 'images', 'saved_recommendations', 'saved_shopping_list', 'selected_variant_idx']:
                     if key in st.session_state:
                         if key == 'images':
                             st.session_state[key] = []
@@ -285,7 +285,7 @@ with st.sidebar:
                             db.commit()
                             st.success("✅ Проект удален")
                             for key in ['current_project_id', 'room_type', 'purpose', 'analysis', 
-                                       'uploaded_image_b64', 'images', 'saved_recommendations', 
+                                       'uploaded_image_b64', 'uploaded_image_bytes', 'images', 'saved_recommendations', 
                                        'saved_shopping_list', 'confirm_delete', 'auto_save_enabled']:
                                 if key in st.session_state:
                                     if key == 'images':
@@ -324,6 +324,10 @@ with st.sidebar:
         uploaded_file.seek(0)
         st.session_state.uploaded_image_bytes = uploaded_file.getvalue()
         st.session_state.uploaded_image_b64 = encode_image(uploaded_file)
+    elif st.session_state.uploaded_image_b64:
+        image_bytes = base64.b64decode(st.session_state.uploaded_image_b64)
+        image = Image.open(io.BytesIO(image_bytes))
+        st.image(image, caption="Загруженное фото", use_container_width=True)
     
     purpose = st.text_area(
         "Цель использования помещения",
@@ -331,9 +335,10 @@ with st.sidebar:
         height=100
     )
     
-    analyze_button = st.button("🔍 Начать анализ", type="primary", disabled=not uploaded_file)
+    has_image = uploaded_file is not None or st.session_state.uploaded_image_b64 is not None
+    analyze_button = st.button("🔍 Начать анализ", type="primary", disabled=not has_image)
 
-if analyze_button and uploaded_file:
+if analyze_button and has_image:
     if st.session_state.analysis:
         st.session_state.analysis = None
         st.session_state.images = []

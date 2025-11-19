@@ -43,6 +43,20 @@ if st.session_state.get('theme') == 'light':
         background-color: #ffffff;
         color: #1f1f1f;
     }
+    .stButton button {
+        color: #1f1f1f !important;
+        background-color: #ffffff !important;
+        border: 1px solid #ddd !important;
+    }
+    .stButton button[kind="primary"] {
+        color: #ffffff !important;
+        background-color: #1f77b4 !important;
+        border: none !important;
+    }
+    .stButton button[kind="secondary"] {
+        color: #1f1f1f !important;
+        background-color: #f0f0f0 !important;
+    }
     """
 
 st.markdown(f"""
@@ -59,7 +73,6 @@ st.markdown(f"""
     padding: 2rem;
 }}
 h1 {{
-    color: #1f1f1f;
     margin-bottom: 2rem;
 }}
 .uploaded-image {{
@@ -622,12 +635,14 @@ if st.session_state.images:
                     )
                     st.session_state.saved_recommendations = recommendations
                 except Exception as e:
-                    st.error(f"Ошибка: {str(e)}")
+                    st.error(f"Ошибка при генерации рекомендаций: {str(e)}")
+                    st.warning("Попробуйте нажать кнопку 'Обновить рекомендации' ниже для повторной генерации")
             
-            with st.spinner("🛒 Создаю список покупок..."):
-                try:
-                    shopping_list = call_gemini(
-                        """Ты — эксперт по закупкам материалов для ремонта. Создай детальный список покупок с:
+            if st.session_state.saved_recommendations:
+                with st.spinner("🛒 Создаю список покупок..."):
+                    try:
+                        shopping_list = call_gemini(
+                            """Ты — эксперт по закупкам материалов для ремонта. Создай детальный список покупок с:
 1. Категориями (Отделка стен, Пол, Потолок, Мебель, Освещение, Декор)
 2. Для каждого товара укажи:
    - Конкретное название товара и артикул (если возможно)
@@ -640,15 +655,15 @@ if st.session_state.images:
 1. **Название товара (артикул)** - описание
    - Количество: X шт/м²/л
    - Цена: ~X руб""",
-                        f"""Тип помещения: {st.session_state.room_type}
+                            f"""Тип помещения: {st.session_state.room_type}
 Рекомендации:
 {st.session_state.saved_recommendations}
 
 Создай список покупок."""
-                    )
-                    st.session_state.saved_shopping_list = shopping_list
-                except Exception as e:
-                    st.error(f"Ошибка: {str(e)}")
+                        )
+                        st.session_state.saved_shopping_list = shopping_list
+                    except Exception as e:
+                        st.error(f"Ошибка при создании списка покупок: {str(e)}")
             
             auto_save_project()
             st.rerun()

@@ -353,6 +353,7 @@ def refine_design_with_vision(design_image_url: str, original_prompt: str, user_
 def generate_design_project_pdf(room_type: str, recommendations: str, shopping_list: str, design_image_url: str = None) -> bytes:
     """Генерирует PDF файл с рекомендациями и списком покупок"""
     try:
+        import re
         from reportlab.lib.pagesizes import A4
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, PageBreak, Table, TableStyle
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -364,6 +365,41 @@ def generate_design_project_pdf(room_type: str, recommendations: str, shopping_l
         from io import BytesIO
         import requests
         import subprocess
+        
+        def clean_text_for_pdf(text: str) -> str:
+            """Удаляет эмодзи и markdown форматирование из текста"""
+            if not text:
+                return ""
+            
+            emoji_pattern = re.compile("["
+                u"\U0001F600-\U0001F64F"
+                u"\U0001F300-\U0001F5FF"
+                u"\U0001F680-\U0001F6FF"
+                u"\U0001F1E0-\U0001F1FF"
+                u"\U00002702-\U000027B0"
+                u"\U000024C2-\U0001F251"
+                u"\U0001f926-\U0001f937"
+                u"\U00010000-\U0010ffff"
+                u"\u2640-\u2642"
+                u"\u2600-\u2B55"
+                u"\u200d"
+                u"\u23cf"
+                u"\u23e9"
+                u"\u231a"
+                u"\ufe0f"
+                u"\u3030"
+                "]+", flags=re.UNICODE)
+            
+            text = emoji_pattern.sub('', text)
+            
+            text = re.sub(r'^\s*#+\s+', '', text, flags=re.MULTILINE)
+            
+            text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+            text = re.sub(r'\*(.+?)\*', r'<i>\1</i>', text)
+            
+            text = re.sub(r'^[\s\-\*]+', '', text, flags=re.MULTILINE)
+            
+            return text.strip()
         
         try:
             font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -429,7 +465,7 @@ def generate_design_project_pdf(room_type: str, recommendations: str, shopping_l
             fontName=normal_font
         )
         
-        story.append(Paragraph("🏠 Дизайн-проект", title_style))
+        story.append(Paragraph("Дизайн-проект", title_style))
         story.append(Spacer(1, 0.2*inch))
         
         story.append(Paragraph(f"<b>Тип помещения:</b> {room_type}", normal_style))
@@ -449,7 +485,7 @@ def generate_design_project_pdf(room_type: str, recommendations: str, shopping_l
                 img = PILImage.open(temp_image)
                 max_width = 6*inch
                 max_height = 4*inch
-                img.thumbnail((max_width, max_height), PILImage.Resampling.LANCZOS)
+                img.thumbnail((int(max_width), int(max_height)), PILImage.Resampling.LANCZOS)
                 
                 img_buffer = BytesIO()
                 img.save(img_buffer, format='JPEG')
@@ -461,24 +497,26 @@ def generate_design_project_pdf(room_type: str, recommendations: str, shopping_l
             except Exception as e:
                 pass
         
-        story.append(Paragraph("💡 Финальные рекомендации", heading_style))
+        story.append(Paragraph("Финальные рекомендации", heading_style))
         story.append(Spacer(1, 0.1*inch))
         
         if recommendations:
             for line in recommendations.split('\n'):
-                if line.strip():
-                    story.append(Paragraph(line, normal_style))
+                cleaned_line = clean_text_for_pdf(line)
+                if cleaned_line:
+                    story.append(Paragraph(cleaned_line, normal_style))
             story.append(Spacer(1, 0.2*inch))
         
         story.append(PageBreak())
         
-        story.append(Paragraph("🛒 Список покупок", heading_style))
+        story.append(Paragraph("Список покупок", heading_style))
         story.append(Spacer(1, 0.1*inch))
         
         if shopping_list:
             for line in shopping_list.split('\n'):
-                if line.strip():
-                    story.append(Paragraph(line, normal_style))
+                cleaned_line = clean_text_for_pdf(line)
+                if cleaned_line:
+                    story.append(Paragraph(cleaned_line, normal_style))
         
         doc.build(story)
         buffer.seek(0)

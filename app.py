@@ -3,7 +3,7 @@ import base64
 from PIL import Image
 import io
 from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_BANANA_ENGINEER, SYSTEM_PROMPT_REFINE_ENGINEER
-from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision, generate_design_project_pdf
+from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision, generate_design_project_pdf, create_before_after_comparison
 import os
 import json
 from dotenv import load_dotenv
@@ -775,6 +775,17 @@ if st.session_state.images:
                     st.error(f"Ошибка при создании списка: {str(e)}")
         
         st.divider()
+        
+        if st.session_state.saved_recommendations and st.session_state.saved_shopping_list:
+            st.subheader("До и после")
+            try:
+                comparison_image_bytes = create_before_after_comparison(
+                    st.session_state.uploaded_image_bytes,
+                    st.session_state.images[st.session_state.selected_variant_idx]['url']
+                )
+                st.image(comparison_image_bytes, use_container_width=True, caption="Слева: исходное помещение | Справа: дизайн-проект")
+            except Exception as e:
+                st.warning(f"⚠️ Не удалось создать композитное изображение: {str(e)}")
         
         col1, col2 = st.columns([1, 1])
         with col1:

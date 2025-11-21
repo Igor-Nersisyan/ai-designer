@@ -350,6 +350,45 @@ def refine_design_with_vision(design_image_url: str, original_prompt: str, user_
     except Exception as e:
         raise Exception(f"Ошибка при доработке дизайна с Gemini Vision: {str(e)}")
 
+def create_before_after_comparison(original_image_bytes: bytes, result_image_url: str) -> bytes:
+    """Создает композитное изображение с исходным слева сверху и результатом справа снизу, 
+    разделенное диагональю от левого нижнего до правого верхнего угла"""
+    try:
+        from PIL import Image as PILImage, ImageDraw
+        import requests
+        
+        original_img = PILImage.open(BytesIO(original_image_bytes)).convert('RGB')
+        
+        if result_image_url.startswith('data:image'):
+            header, encoded = result_image_url.split(',', 1)
+            result_bytes = base64.b64decode(encoded)
+            result_img = PILImage.open(BytesIO(result_bytes)).convert('RGB')
+        else:
+            resp = requests.get(result_image_url, timeout=10)
+            result_img = PILImage.open(BytesIO(resp.content)).convert('RGB')
+        
+        size = (800, 600)
+        original_img = original_img.resize(size, PILImage.Resampling.LANCZOS)
+        result_img = result_img.resize(size, PILImage.Resampling.LANCZOS)
+        
+        composite = PILImage.new('RGB', size, 'white')
+        composite.paste(original_img, (0, 0))
+        
+        mask = PILImage.new('L', size, 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.polygon([(0, size[1]), (size[0], 0), (size[0], size[1])], fill=255)
+        
+        composite.paste(result_img, (0, 0), mask)
+        
+        output_buffer = BytesIO()
+        composite.save(output_buffer, format='PNG')
+        output_buffer.seek(0)
+        
+        return output_buffer.getvalue()
+        
+    except Exception as e:
+        raise Exception(f"Ошибка при создании композитного изображения: {str(e)}")
+
 def generate_design_project_pdf(room_type: str, recommendations: str, shopping_list: str, design_image_url: str = None) -> bytes:
     """Генерирует PDF файл с рекомендациями и списком покупок"""
     try:

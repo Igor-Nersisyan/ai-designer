@@ -359,8 +359,40 @@ def generate_design_project_pdf(room_type: str, recommendations: str, shopping_l
         from reportlab.lib.units import inch
         from reportlab.lib import colors
         from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
         from io import BytesIO
         import requests
+        import subprocess
+        
+        try:
+            font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+            font_bold_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+            
+            if not os.path.exists(font_path):
+                result = subprocess.run(['find', '/usr/share/fonts', '-name', '*DejaVu*Sans*.ttf'], 
+                                       capture_output=True, text=True, timeout=5)
+                if result.stdout:
+                    font_path = result.stdout.strip().split('\n')[0]
+                    font_bold_path = [f for f in result.stdout.strip().split('\n') if 'Bold' in f]
+                    if font_bold_path:
+                        font_bold_path = font_bold_path[0]
+            
+            if os.path.exists(font_path):
+                pdfmetrics.registerFont(TTFont('CustomFont', font_path))
+                if os.path.exists(font_bold_path):
+                    pdfmetrics.registerFont(TTFont('CustomFontBold', font_bold_path))
+                    font_name = 'CustomFontBold'
+                    normal_font = 'CustomFont'
+                else:
+                    font_name = 'CustomFont'
+                    normal_font = 'CustomFont'
+            else:
+                font_name = 'Helvetica-Bold'
+                normal_font = 'Helvetica'
+        except:
+            font_name = 'Helvetica-Bold'
+            normal_font = 'Helvetica'
         
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
@@ -375,7 +407,7 @@ def generate_design_project_pdf(room_type: str, recommendations: str, shopping_l
             textColor=colors.HexColor('#1f77b4'),
             spaceAfter=12,
             alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
+            fontName=font_name
         )
         
         heading_style = ParagraphStyle(
@@ -385,7 +417,7 @@ def generate_design_project_pdf(room_type: str, recommendations: str, shopping_l
             textColor=colors.HexColor('#1f77b4'),
             spaceAfter=10,
             spaceBefore=10,
-            fontName='Helvetica-Bold'
+            fontName=font_name
         )
         
         normal_style = ParagraphStyle(
@@ -393,7 +425,8 @@ def generate_design_project_pdf(room_type: str, recommendations: str, shopping_l
             parent=styles['Normal'],
             fontSize=10,
             spaceAfter=6,
-            alignment=TA_LEFT
+            alignment=TA_LEFT,
+            fontName=normal_font
         )
         
         story.append(Paragraph("🏠 Дизайн-проект", title_style))

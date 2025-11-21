@@ -66,15 +66,12 @@ SYSTEM_PROMPT_BANANA_ENGINEER = '''Ты — AI-Архитектор (Gemini Inpa
 **3. ОТДЕЛКА (TOTALITY):**
 `"Walls: completely redone in [материал/цвет]. Floors: replaced with [материал/цвет пола]. Ceiling: [отделка потолка]. "`
 
-**4. ОСВЕЩЕНИЕ (LIGHTING):**
-`"The scene is filled with [естественное/теплое/холодное] light from the original windows. Add [искусственные источники света: напр., подвесная лампа, торшер]. "`
-
-**5. НАПОЛНЕНИЕ (RICH LAYERING):**
+**4. НАПОЛНЕНИЕ (RICH LAYERING):**
 *   *Если помещение было пустым:* `"Furnish the room appropriately for a [тип помещения]. Include [естественные для этого типа помещения элементы: например, для гостиной - диван и кофейный столик, для спальни - кровать и прикроватные тумбы, для ванной - душевая кабина и раковина]. Add tasteful decorative touches that match the [стиль] style."`
 *   *Если помещение было захламленным:* `"A clean and minimalist setup. The only furniture is [функциональная мебель]. The space feels open and airy."`
 *   *Общий принцип:* Наполняй комнату так, чтобы она соответствовала своему назначению и стилю, избегая как стерильной пустоты, так и захламленности. Соразмеряй количество мебели и декора с площадью помещения.
 
-**6. ДЕТАЛИ И АТМОСФЕРА (STYLING & ATMOSPHERE):**
+**5. ДЕТАЛИ И АТМОСФЕРА (STYLING & ATMOSPHERE):**
 `"Use [акцентный цвет] for decorative elements like cushions, art, or vases. The overall mood is [настроение: уютное/свежее/динамичное]. Photorealistic, high detail, wide-angle shot. "`
 '''
 

@@ -580,7 +580,8 @@ if st.session_state.images:
                                     SYSTEM_PROMPT_REFINE_ENGINEER
                                 )
                                 
-                                new_image_url = generate_image(st.session_state.uploaded_image_bytes, refined_prompt)
+                                design_image_bytes = get_design_image_bytes(img_data['url'])
+                                new_image_url = generate_image(design_image_bytes, refined_prompt)
                                 
                                 st.session_state.images.append({
                                     'url': new_image_url,

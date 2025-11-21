@@ -351,7 +351,7 @@ def refine_design_with_vision(design_image_url: str, original_prompt: str, user_
         raise Exception(f"Ошибка при доработке дизайна с Gemini Vision: {str(e)}")
 
 def create_before_after_comparison(original_image_bytes: bytes, result_image_url: str) -> bytes:
-    """Создает композитное изображение с исходным слева и результатом справа, 
+    """Создает композитное изображение с половиной исходного изображения слева и половиной результата справа, 
     разделенные вертикальной линией в центре"""
     try:
         from PIL import Image as PILImage, ImageDraw
@@ -372,12 +372,16 @@ def create_before_after_comparison(original_image_bytes: bytes, result_image_url
         height = 350
         half_width = width // 2
         
-        original_img = original_img.resize((half_width, height), PILImage.Resampling.LANCZOS)
-        result_img = result_img.resize((half_width, height), PILImage.Resampling.LANCZOS)
+        original_img = original_img.resize((width, height), PILImage.Resampling.LANCZOS)
+        result_img = result_img.resize((width, height), PILImage.Resampling.LANCZOS)
         
         composite = PILImage.new('RGB', (width, height), 'white')
-        composite.paste(original_img, (0, 0))
-        composite.paste(result_img, (half_width, 0))
+        
+        original_half = original_img.crop((0, 0, half_width, height))
+        result_half = result_img.crop((half_width, 0, width, height))
+        
+        composite.paste(original_half, (0, 0))
+        composite.paste(result_half, (half_width, 0))
         
         draw = ImageDraw.Draw(composite)
         line_color = (200, 200, 200)

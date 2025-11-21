@@ -113,6 +113,13 @@ h1 {{
     color: #999;
     margin-top: 0.25rem;
 }}
+[data-testid="stFileUploader"] button {{
+    font-size: 0 !important;
+}}
+[data-testid="stFileUploader"] button::before {{
+    content: "Выбрать файлы" !important;
+    font-size: 0.875rem !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 

@@ -355,6 +355,7 @@ def create_before_after_comparison(original_image_bytes: bytes, result_image_url
     разделенное диагональю от левого нижнего до правого верхнего угла"""
     try:
         from PIL import Image as PILImage, ImageDraw
+        from io import BytesIO
         import requests
         
         original_img = PILImage.open(BytesIO(original_image_bytes)).convert('RGB')

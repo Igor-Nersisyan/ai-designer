@@ -2,7 +2,7 @@ import streamlit as st
 import base64
 from PIL import Image
 import io
-from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_DALLE_ENGINEER
+from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_BANANA_ENGINEER
 from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision
 import os
 import json
@@ -490,8 +490,8 @@ if st.session_state.analysis:
         else:
             with st.spinner("🎨 Создаю дизайн-проект..."):
                 try:
-                    raw_prompt = call_gemini(
-                        SYSTEM_PROMPT_DALLE_ENGINEER,
+                    dalle_prompt = call_gemini(
+                        SYSTEM_PROMPT_BANANA_ENGINEER,
                         f"""Room analysis:
 {st.session_state.analysis}
 
@@ -501,17 +501,9 @@ Styles: {', '.join(styles)}
 Accent color: {main_color}
 Additional preferences: {additional_preferences if additional_preferences else 'none'}
 
-Create the prompt now."""
+Create the prompt now.""",
+                        return_json_key="prompt"
                     )
-                    
-                    import re
-                    dalle_prompt = raw_prompt
-                    if "Transform" in raw_prompt:
-                        match = re.search(r'(Transform.*)', raw_prompt, re.DOTALL)
-                        if match:
-                            dalle_prompt = match.group(1).strip()
-                    
-                    dalle_prompt = dalle_prompt.replace('\n\n', ' ').replace('\n', ' ').strip()
                     
                     image_url = generate_image(st.session_state.uploaded_image_bytes, dalle_prompt)
                     

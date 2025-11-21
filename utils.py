@@ -119,8 +119,17 @@ def call_gemini_vision_markdown(system_prompt: str, user_text: str, image_bytes:
     except Exception as e:
         raise Exception(f"Ошибка Gemini Vision: {str(e)}")
 
-def call_gemini(system_prompt: str, user_prompt: str) -> str:
-    """Обычный вызов Gemini для текста"""
+def call_gemini(system_prompt: str, user_prompt: str, return_json_key: str = None) -> str:
+    """Обычный вызов Gemini для текста. 
+    
+    Args:
+        system_prompt: Системный промпт
+        user_prompt: Промпт пользователя
+        return_json_key: Если указан, функция попытается распарсить JSON ответ и вернуть значение этого ключа
+    
+    Returns:
+        Текстовый ответ или значение указанного ключа из JSON
+    """
     try:
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
@@ -132,13 +141,18 @@ def call_gemini(system_prompt: str, user_prompt: str) -> str:
 
 {user_prompt}"""
         
+        config_params = {
+            "temperature": 0.7,
+            "max_output_tokens": 8000,
+        }
+        
+        if return_json_key:
+            config_params["response_mime_type"] = "application/json"
+        
         response = client.models.generate_content(
             model="gemini-2.5-pro",
             contents=full_prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.7,
-                max_output_tokens=8000,
-            )
+            config=types.GenerateContentConfig(**config_params)
         )
         
         if not response:
@@ -161,6 +175,16 @@ def call_gemini(system_prompt: str, user_prompt: str) -> str:
         
         if not content:
             raise Exception("Пустой ответ от Gemini")
+        
+        if return_json_key:
+            try:
+                parsed_json = json.loads(content)
+                if return_json_key in parsed_json:
+                    return parsed_json[return_json_key]
+                else:
+                    raise Exception(f"Ключ '{return_json_key}' не найден в JSON ответе. Получен ответ: {content}")
+            except json.JSONDecodeError as e:
+                raise Exception(f"Не удалось распарсить JSON ответ: {e}. Получен ответ: {content}")
         
         return content
     except Exception as e:

@@ -41,6 +41,15 @@ if st.session_state.get('theme') == 'light':
     [data-testid="stMarkdownContainer"] {
         color: #1f1f1f;
     }
+    header[data-testid="stHeader"] {
+        background-color: #ffffff !important;
+    }
+    [data-testid="stHeader"] {
+        background-color: #ffffff !important;
+    }
+    .stToolbar {
+        background-color: #ffffff !important;
+    }
     h1, h2, h3, h4, h5, h6 {
         color: #1f1f1f !important;
     }

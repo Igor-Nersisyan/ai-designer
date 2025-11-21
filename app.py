@@ -776,17 +776,6 @@ if st.session_state.images:
         
         st.divider()
         
-        if st.session_state.saved_recommendations and st.session_state.saved_shopping_list:
-            st.subheader("До и после")
-            try:
-                comparison_image_bytes = create_before_after_comparison(
-                    st.session_state.uploaded_image_bytes,
-                    st.session_state.images[st.session_state.selected_variant_idx]['url']
-                )
-                st.image(comparison_image_bytes, use_container_width=True, caption="Слева: исходное помещение | Справа: дизайн-проект")
-            except Exception as e:
-                st.warning(f"⚠️ Не удалось создать композитное изображение: {str(e)}")
-        
         col1, col2 = st.columns([1, 1])
         with col1:
             if st.button("📥 Экспортировать в PDF", type="primary", key="export_pdf", use_container_width=True):

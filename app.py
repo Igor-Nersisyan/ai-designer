@@ -9,7 +9,6 @@ import json
 from dotenv import load_dotenv
 from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
 from datetime import datetime, timedelta
-from pdf_generator import generate_design_pdf
 
 def get_moscow_time():
     """Возвращает текущее время по Москве (UTC+3)"""

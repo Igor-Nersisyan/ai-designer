@@ -8,8 +8,12 @@ import os
 import json
 from dotenv import load_dotenv
 from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
-from datetime import datetime
+from datetime import datetime, timedelta
 from pdf_generator import generate_design_pdf
+
+def get_moscow_time():
+    """Возвращает текущее время по Москве (UTC+3)"""
+    return datetime.utcnow() + timedelta(hours=3)
 
 load_dotenv()
 
@@ -159,7 +163,8 @@ def auto_save_project():
     
     db = SessionLocal()
     try:
-        project_name = f"Проект {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        moscow_time = get_moscow_time()
+        project_name = f"Проект {moscow_time.strftime('%d.%m.%Y %H:%M')}"
         if st.session_state.current_project_id:
             project = db.query(Project).filter(
                 Project.id == st.session_state.current_project_id,
@@ -170,7 +175,7 @@ def auto_save_project():
                 project.purpose = st.session_state.purpose
                 project.analysis = st.session_state.analysis
                 project.uploaded_image_b64 = st.session_state.uploaded_image_b64
-                project.updated_at = datetime.utcnow()
+                project.updated_at = moscow_time
                 
                 db.query(DesignVariant).filter(DesignVariant.project_id == project.id).delete()
         else:

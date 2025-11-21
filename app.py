@@ -89,38 +89,6 @@ h1 {{
     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     margin-bottom: 1rem;
 }}
-[data-testid="stFileUploader"] {{
-    min-height: auto;
-}}
-[data-testid="stFileUploader"] section {{
-    padding: 1.5rem !important;
-    min-height: auto !important;
-}}
-[data-testid="stFileUploader"] section > div {{
-    font-size: 0 !important;
-}}
-[data-testid="stFileUploader"] section > div::before {{
-    content: "Перетащите файл сюда или нажмите для выбора" !important;
-    font-size: 1rem !important;
-    display: block !important;
-    text-align: center;
-}}
-[data-testid="stFileUploader"] section > div::after {{
-    content: "Макс. размер: 200MB на файл • JPG, JPEG, PNG" !important;
-    font-size: 0.8rem !important;
-    display: block !important;
-    text-align: center;
-    color: #999;
-    margin-top: 0.5rem;
-}}
-[data-testid="stFileUploader"] button {{
-    font-size: 0 !important;
-    padding: 0.5rem 1rem !important;
-}}
-[data-testid="stFileUploader"] button::before {{
-    content: "Выбрать файлы" !important;
-    font-size: 0.875rem !important;
-}}
 </style>
 """, unsafe_allow_html=True)
 

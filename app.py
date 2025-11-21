@@ -3,7 +3,7 @@ import base64
 from PIL import Image
 import io
 from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_BANANA_ENGINEER, SYSTEM_PROMPT_REFINE_ENGINEER
-from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision
+from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision, generate_design_project_pdf
 import os
 import json
 from dotenv import load_dotenv
@@ -773,3 +773,35 @@ if st.session_state.images:
                     st.rerun()
                 except Exception as e:
                     st.error(f"Ошибка при создании списка: {str(e)}")
+        
+        st.divider()
+        
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("📥 Экспортировать в PDF", type="primary", key="export_pdf", use_container_width=True):
+                try:
+                    if not st.session_state.saved_recommendations or not st.session_state.saved_shopping_list:
+                        st.error("❌ Сначала создайте рекомендации и список покупок")
+                    else:
+                        with st.spinner("📄 Генерирую PDF..."):
+                            design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
+                            pdf_bytes = generate_design_project_pdf(
+                                st.session_state.room_type,
+                                st.session_state.saved_recommendations,
+                                st.session_state.saved_shopping_list,
+                                design_url
+                            )
+                            
+                            moscow_time = get_moscow_time()
+                            filename = f"design_project_{moscow_time.strftime('%d_%m_%Y_%H_%M')}.pdf"
+                            
+                            st.download_button(
+                                label="💾 Скачать PDF",
+                                data=pdf_bytes,
+                                file_name=filename,
+                                mime="application/pdf",
+                                key="pdf_download"
+                            )
+                            st.success("✅ PDF готов к скачиванию!")
+                except Exception as e:
+                    st.error(f"Ошибка при экспорте: {str(e)}")

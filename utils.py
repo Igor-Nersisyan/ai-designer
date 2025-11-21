@@ -349,3 +349,107 @@ def refine_design_with_vision(design_image_url: str, original_prompt: str, user_
             
     except Exception as e:
         raise Exception(f"Ошибка при доработке дизайна с Gemini Vision: {str(e)}")
+
+def generate_design_project_pdf(room_type: str, recommendations: str, shopping_list: str, design_image_url: str = None) -> bytes:
+    """Генерирует PDF файл с рекомендациями и списком покупок"""
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, PageBreak, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from io import BytesIO
+        import requests
+        
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+        
+        story = []
+        styles = getSampleStyleSheet()
+        
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#1f77b4'),
+            spaceAfter=12,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.HexColor('#1f77b4'),
+            spaceAfter=10,
+            spaceBefore=10,
+            fontName='Helvetica-Bold'
+        )
+        
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=10,
+            spaceAfter=6,
+            alignment=TA_LEFT
+        )
+        
+        story.append(Paragraph("🏠 Дизайн-проект", title_style))
+        story.append(Spacer(1, 0.2*inch))
+        
+        story.append(Paragraph(f"<b>Тип помещения:</b> {room_type}", normal_style))
+        story.append(Spacer(1, 0.1*inch))
+        
+        if design_image_url:
+            try:
+                if design_image_url.startswith('data:image'):
+                    header, encoded = design_image_url.split(',', 1)
+                    image_bytes = base64.b64decode(encoded)
+                    temp_image = BytesIO(image_bytes)
+                else:
+                    resp = requests.get(design_image_url, timeout=10)
+                    temp_image = BytesIO(resp.content)
+                
+                from PIL import Image as PILImage
+                img = PILImage.open(temp_image)
+                max_width = 6*inch
+                max_height = 4*inch
+                img.thumbnail((max_width, max_height), PILImage.Resampling.LANCZOS)
+                
+                img_buffer = BytesIO()
+                img.save(img_buffer, format='JPEG')
+                img_buffer.seek(0)
+                
+                img_obj = Image(img_buffer, width=4*inch, height=3*inch)
+                story.append(img_obj)
+                story.append(Spacer(1, 0.2*inch))
+            except Exception as e:
+                pass
+        
+        story.append(Paragraph("💡 Финальные рекомендации", heading_style))
+        story.append(Spacer(1, 0.1*inch))
+        
+        if recommendations:
+            for line in recommendations.split('\n'):
+                if line.strip():
+                    story.append(Paragraph(line, normal_style))
+            story.append(Spacer(1, 0.2*inch))
+        
+        story.append(PageBreak())
+        
+        story.append(Paragraph("🛒 Список покупок", heading_style))
+        story.append(Spacer(1, 0.1*inch))
+        
+        if shopping_list:
+            for line in shopping_list.split('\n'):
+                if line.strip():
+                    story.append(Paragraph(line, normal_style))
+        
+        doc.build(story)
+        buffer.seek(0)
+        return buffer.getvalue()
+        
+    except Exception as e:
+        raise Exception(f"Ошибка при генерации PDF: {str(e)}")

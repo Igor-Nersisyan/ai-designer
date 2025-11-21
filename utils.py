@@ -276,11 +276,15 @@ def generate_image(source_image_bytes: bytes, prompt: str) -> str:
     except Exception as e:
         raise Exception(f"Ошибка Gemini Image Generation: {str(e)}")
 
-def refine_design_with_vision(design_image_url: str, original_prompt: str, user_feedback: str) -> str:
-    """Доработка дизайна с помощью Gemini Vision - анализирует изображение дизайна и создаёт новый промпт"""
+def refine_design_with_vision(design_image_url: str, original_prompt: str, user_feedback: str, refine_system_prompt: str) -> str:
+    """Доработка дизайна с помощью Gemini Vision - анализирует изображение дизайна и создаёт новый промпт с минимальными изменениями"""
     try:
         import requests
         from io import BytesIO
+        
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise Exception("GEMINI_API_KEY не найден")
         
         if design_image_url.startswith('data:image'):
             header, encoded = design_image_url.split(',', 1)
@@ -289,28 +293,15 @@ def refine_design_with_vision(design_image_url: str, original_prompt: str, user_
             response = requests.get(design_image_url, timeout=10)
             image_bytes = response.content
         
-        client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        client = genai.Client(api_key=api_key)
         
-        system_prompt = """Ты — эксперт по промпт-инженерингу для Gemini Image Generation. 
-Твоя задача — проанализировать изображение дизайна интерьера и пожелания пользователя, 
-а затем создать НОВЫЙ, улучшенный промпт для генерации изображений.
-
-Промпт должен:
-1. Сохранять общую концепцию и стиль исходного дизайна
-2. Учитывать все пожелания пользователя
-3. Быть детальным и описательным
-4. Быть на английском языке
-5. Сохранять структурные элементы помещения (стены, окна, двери)
-
-Верни ТОЛЬКО новый промпт, без дополнительных пояснений."""
-        
-        user_text = f"""Исходный промпт который создал этот дизайн:
+        user_text = f"""ИСХОДНЫЙ ПРОМПТ, который создал этот дизайн:
 {original_prompt}
 
-Пожелания пользователя по доработке:
+ПОЖЕЛАНИЯ ПОЛЬЗОВАТЕЛЯ (внеси ТОЛЬКО эти изменения):
 {user_feedback}
 
-Проанализируй изображение дизайна и создай НОВЫЙ промпт, который учтёт пожелания пользователя."""
+Проанализируй изображение текущего дизайна и создай промпт для точечной корректировки."""
         
         response = client.models.generate_content(
             model="gemini-2.5-pro",
@@ -319,19 +310,27 @@ def refine_design_with_vision(design_image_url: str, original_prompt: str, user_
                     data=image_bytes,
                     mime_type="image/jpeg",
                 ),
-                f"{system_prompt}\n\n{user_text}"
+                f"{refine_system_prompt}\n\n{user_text}"
             ],
             config=types.GenerateContentConfig(
+                response_mime_type="application/json",
                 temperature=0.7,
             )
         )
         
-        refined_prompt = response.text
+        raw_content = response.text
         
-        if not refined_prompt:
+        if not raw_content:
             raise Exception("Пустой ответ от Gemini Vision при доработке дизайна")
         
-        return refined_prompt.strip()
+        try:
+            parsed_json = json.loads(raw_content)
+            if "prompt" in parsed_json:
+                return parsed_json["prompt"]
+            else:
+                raise Exception(f"Ключ 'prompt' не найден в JSON ответе. Получен ответ: {raw_content}")
+        except json.JSONDecodeError as e:
+            raise Exception(f"Не удалось распарсить JSON ответ при доработке: {e}. Получен ответ: {raw_content}")
             
     except Exception as e:
         raise Exception(f"Ошибка при доработке дизайна с Gemini Vision: {str(e)}")

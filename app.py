@@ -2,7 +2,7 @@ import streamlit as st
 import base64
 from PIL import Image
 import io
-from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_BANANA_ENGINEER
+from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_BANANA_ENGINEER, SYSTEM_PROMPT_REFINE_ENGINEER
 from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision
 import os
 import json
@@ -576,7 +576,8 @@ if st.session_state.images:
                                 refined_prompt = refine_design_with_vision(
                                     img_data['url'],
                                     img_data['prompt'],
-                                    feedback
+                                    feedback,
+                                    SYSTEM_PROMPT_REFINE_ENGINEER
                                 )
                                 
                                 new_image_url = generate_image(st.session_state.uploaded_image_bytes, refined_prompt)

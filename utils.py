@@ -351,8 +351,8 @@ def refine_design_with_vision(design_image_url: str, original_prompt: str, user_
         raise Exception(f"Ошибка при доработке дизайна с Gemini Vision: {str(e)}")
 
 def create_before_after_comparison(original_image_bytes: bytes, result_image_url: str) -> bytes:
-    """Создает композитное изображение с исходным слева сверху и результатом справа снизу, 
-    разделенное диагональю от левого нижнего до правого верхнего угла"""
+    """Создает композитное изображение с исходным слева и результатом справа, 
+    разделенные вертикальной линией в центре"""
     try:
         from PIL import Image as PILImage, ImageDraw
         from io import BytesIO
@@ -368,18 +368,20 @@ def create_before_after_comparison(original_image_bytes: bytes, result_image_url
             resp = requests.get(result_image_url, timeout=10)
             result_img = PILImage.open(BytesIO(resp.content)).convert('RGB')
         
-        size = (800, 600)
-        original_img = original_img.resize(size, PILImage.Resampling.LANCZOS)
-        result_img = result_img.resize(size, PILImage.Resampling.LANCZOS)
+        width = 500
+        height = 350
+        half_width = width // 2
         
-        composite = PILImage.new('RGB', size, 'white')
+        original_img = original_img.resize((half_width, height), PILImage.Resampling.LANCZOS)
+        result_img = result_img.resize((half_width, height), PILImage.Resampling.LANCZOS)
+        
+        composite = PILImage.new('RGB', (width, height), 'white')
         composite.paste(original_img, (0, 0))
+        composite.paste(result_img, (half_width, 0))
         
-        mask = PILImage.new('L', size, 0)
-        mask_draw = ImageDraw.Draw(mask)
-        mask_draw.polygon([(0, size[1]), (size[0], 0), (size[0], size[1])], fill=255)
-        
-        composite.paste(result_img, (0, 0), mask)
+        draw = ImageDraw.Draw(composite)
+        line_color = (200, 200, 200)
+        draw.line([(half_width, 0), (half_width, height)], fill=line_color, width=2)
         
         output_buffer = BytesIO()
         composite.save(output_buffer, format='PNG')

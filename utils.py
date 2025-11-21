@@ -62,8 +62,15 @@ def call_gemini_vision(system_prompt: str, user_text: str, image_bytes: bytes) -
     except Exception as e:
         raise Exception(f"Ошибка Gemini Vision: {str(e)}")
 
-def call_gemini_vision_markdown(system_prompt: str, user_text: str, image_bytes: bytes) -> str:
-    """Вызов Gemini Pro Vision для анализа изображения. Возвращает обычный Markdown текст."""
+def call_gemini_vision_markdown(system_prompt: str, user_text: str, image_bytes: bytes, second_image_bytes: bytes = None) -> str:
+    """Вызов Gemini Pro Vision для анализа изображения(й). Возвращает обычный Markdown текст.
+    
+    Args:
+        system_prompt: Системный промпт
+        user_text: Текст пользователя
+        image_bytes: Байты основного изображения
+        second_image_bytes: (опционально) Байты второго изображения для сравнения
+    """
     try:
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
@@ -78,15 +85,23 @@ def call_gemini_vision_markdown(system_prompt: str, user_text: str, image_bytes:
 
 {user_text}"""
         
+        contents = [
+            full_prompt,
+            types.Part.from_bytes(
+                data=image_bytes,
+                mime_type="image/jpeg",
+            )
+        ]
+        
+        if second_image_bytes:
+            contents.append(types.Part.from_bytes(
+                data=second_image_bytes,
+                mime_type="image/jpeg",
+            ))
+        
         response = client.models.generate_content(
             model="gemini-2.5-pro",
-            contents=[
-                types.Part.from_bytes(
-                    data=image_bytes,
-                    mime_type="image/jpeg",
-                ),
-                full_prompt
-            ],
+            contents=contents,
             config=types.GenerateContentConfig(
                 temperature=0.7,
                 max_output_tokens=8000,

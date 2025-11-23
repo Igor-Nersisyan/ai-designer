@@ -52,9 +52,31 @@ if st.session_state.get('theme') == 'light':
     h1, h2, h3, h4, h5, h6 {
         color: #1f1f1f !important;
     }
-    .stTextInput input, .stTextArea textarea, .stSelectbox select {
-        background-color: #ffffff;
-        color: #1f1f1f;
+    .stTextInput input, .stTextArea textarea {
+        background-color: #ffffff !important;
+        color: #1f1f1f !important;
+        border: 1px solid #d0d0d0 !important;
+    }
+    .stSelectbox select, .stMultiSelect, [data-testid="stMultiSelect"] {
+        background-color: #ffffff !important;
+        color: #1f1f1f !important;
+    }
+    [data-testid="stSelectbox"] div {
+        background-color: #ffffff !important;
+    }
+    [data-testid="stSelectbox"] {
+        background-color: #ffffff !important;
+    }
+    .stSelectbox [data-baseweb="select"] {
+        background-color: #ffffff !important;
+    }
+    .stSelectbox [data-baseweb="select"] div {
+        background-color: #ffffff !important;
+        color: #1f1f1f !important;
+    }
+    [data-baseweb="input"] {
+        background-color: #ffffff !important;
+        color: #1f1f1f !important;
     }
     .stButton button {
         color: #1f1f1f !important;
@@ -65,10 +87,16 @@ if st.session_state.get('theme') == 'light':
         color: #ffffff !important;
         background-color: #1f77b4 !important;
         border: none !important;
+        font-weight: 700 !important;
     }
     .stButton button[kind="secondary"] {
         color: #1f1f1f !important;
         background-color: #f0f0f0 !important;
+        border: 1px solid #d0d0d0 !important;
+    }
+    [data-testid="stColorBlock"] {
+        border: 1px solid #d0d0d0 !important;
+        border-radius: 4px !important;
     }
     """
 
@@ -450,7 +478,8 @@ if st.session_state.analysis:
     if 'selected_styles' not in st.session_state:
         st.session_state.selected_styles = []
     if 'selected_color' not in st.session_state:
-        st.session_state.selected_color = "#FFFFFF"
+        default_color = "#CCCCCC" if st.session_state.get('theme') == 'light' else "#FFFFFF"
+        st.session_state.selected_color = default_color
     
     with col1:
         styles = st.multiselect(

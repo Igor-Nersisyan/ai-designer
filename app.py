@@ -536,7 +536,8 @@ if st.session_state.images:
                     if st.button("🔄 Перегенерировать", key=f"regen_{idx}", use_container_width=True):
                         with st.spinner("🎨 Генерирую новый вариант..."):
                             try:
-                                new_image_url = generate_image(st.session_state.uploaded_image_bytes, edited_prompt)
+                                design_image_bytes = get_design_image_bytes(img_data['url'])
+                                new_image_url = generate_image(design_image_bytes, edited_prompt)
                                 st.session_state.images.append({
                                     'url': new_image_url,
                                     'prompt': edited_prompt,

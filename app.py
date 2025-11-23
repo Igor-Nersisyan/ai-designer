@@ -2,8 +2,8 @@ import streamlit as st
 import base64
 from PIL import Image
 import io
-from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_BANANA_ENGINEER, SYSTEM_PROMPT_REFINE_ENGINEER, SYSTEM_PROMPT_COLOR_REFINE_ENGINEER
-from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision, refine_design_with_colors, generate_design_project_pdf, create_before_after_comparison
+from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_BANANA_ENGINEER, SYSTEM_PROMPT_REFINE_ENGINEER
+from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision, generate_design_project_pdf, create_before_after_comparison
 import os
 import json
 from dotenv import load_dotenv
@@ -683,59 +683,6 @@ if st.session_state.images:
                                 st.error(f"Ошибка при доработке дизайна: {str(e)}")
                     else:
                         st.warning("Опишите желаемые изменения")
-                
-                st.divider()
-                
-                st.markdown("**🎨 Доработка по цветам (опционально)**")
-                with st.expander("🌈 Изменить цветовую схему", expanded=False):
-                    st.caption("Выберите новую цветовую схему для переколорирования дизайна. Планировка и мебель останутся неизменными.")
-                    
-                    col_colors = st.columns(3)
-                    with col_colors[0]:
-                        primary_color_refined = st.color_picker(
-                            "Основной цвет",
-                            "#CCCCCC",
-                            key=f"color_primary_{idx}"
-                        )
-                    with col_colors[1]:
-                        secondary_color_refined = st.color_picker(
-                            "Дополнительный цвет 1",
-                            "#888888",
-                            key=f"color_secondary_{idx}"
-                        )
-                    with col_colors[2]:
-                        tertiary_color_refined = st.color_picker(
-                            "Дополнительный цвет 2",
-                            "#444444",
-                            key=f"color_tertiary_{idx}"
-                        )
-                    
-                    if st.button("🎨 Применить новую цветовую схему", type="primary", key=f"apply_colors_{idx}", use_container_width=True):
-                        with st.spinner("🎨 Переколорирую дизайн..."):
-                            try:
-                                color_refined_prompt = refine_design_with_colors(
-                                    img_data['url'],
-                                    img_data['prompt'],
-                                    primary_color_refined,
-                                    secondary_color_refined,
-                                    tertiary_color_refined,
-                                    SYSTEM_PROMPT_COLOR_REFINE_ENGINEER
-                                )
-                                
-                                design_image_bytes = get_design_image_bytes(img_data['url'])
-                                new_image_url = generate_image(design_image_bytes, color_refined_prompt)
-                                
-                                st.session_state.images.append({
-                                    'url': new_image_url,
-                                    'prompt': color_refined_prompt,
-                                    'iterations': img_data['iterations'] + 1
-                                })
-                                
-                                auto_save_project()
-                                st.success("✅ Дизайн с новой цветовой схемой создан!")
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Ошибка при переколорировании дизайна: {str(e)}")
                 
                 st.divider()
                 

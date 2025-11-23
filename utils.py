@@ -396,68 +396,6 @@ def create_before_after_comparison(original_image_bytes: bytes, result_image_url
     except Exception as e:
         raise Exception(f"Ошибка при создании композитного изображения: {str(e)}")
 
-def refine_design_with_colors(design_image_url: str, original_prompt: str, primary_color: str, secondary_color: str, tertiary_color: str, refine_system_prompt: str) -> str:
-    """Доработка дизайна с изменением цветовой схемы - анализирует изображение и создаёт промпт для изменения цветов без изменения планировки и мебели"""
-    try:
-        import requests
-        from io import BytesIO
-        
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise Exception("GEMINI_API_KEY не найден")
-        
-        if design_image_url.startswith('data:image'):
-            header, encoded = design_image_url.split(',', 1)
-            image_bytes = base64.b64decode(encoded)
-        else:
-            response = requests.get(design_image_url, timeout=10)
-            image_bytes = response.content
-        
-        client = genai.Client(api_key=api_key)
-        
-        user_text = f"""ИСХОДНЫЙ ПРОМПТ, который создал этот дизайн:
-{original_prompt}
-
-НОВАЯ ЦВЕТОВАЯ СХЕМА:
-- Основной цвет: {primary_color}
-- Дополнительный цвет 1: {secondary_color}
-- Дополнительный цвет 2: {tertiary_color}
-
-Проанализируй изображение текущего дизайна и создай промпт для изменения только цветов всех элементов на новую цветовую схему.
-КРИТИЧЕСКИ ВАЖНО: сохрани планировку, геометрию помещения, мебель и её расположение без изменений. Меняй ТОЛЬКО цвета."""
-        
-        response = client.models.generate_content(
-            model="gemini-2.5-pro",
-            contents=[
-                types.Part.from_bytes(
-                    data=image_bytes,
-                    mime_type="image/jpeg",
-                ),
-                f"{refine_system_prompt}\n\n{user_text}"
-            ],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.7,
-            )
-        )
-        
-        raw_content = response.text
-        
-        if not raw_content:
-            raise Exception("Пустой ответ от Gemini Vision при доработке цветов")
-        
-        try:
-            parsed_json = json.loads(raw_content)
-            if "prompt" in parsed_json:
-                return parsed_json["prompt"]
-            else:
-                raise Exception(f"Ключ 'prompt' не найден в JSON ответе. Получен ответ: {raw_content}")
-        except json.JSONDecodeError as e:
-            raise Exception(f"Не удалось распарсить JSON ответ при доработке цветов: {e}. Получен ответ: {raw_content}")
-            
-    except Exception as e:
-        raise Exception(f"Ошибка при доработке дизайна по цветам с Gemini Vision: {str(e)}")
-
 def generate_design_project_pdf(room_type: str, recommendations: str, shopping_list: str, design_image_url: str = None) -> bytes:
     """Генерирует PDF файл с рекомендациями и списком покупок"""
     try:

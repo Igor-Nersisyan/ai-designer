@@ -108,15 +108,15 @@ if st.session_state.get('theme') == 'light':
         color: #1f1f1f !important;
     }
     .stButton button {
-        color: #1f1f1f !important;
+        color: #ffffff !important;
         background-color: #ffffff !important;
         border: 1px solid #ddd !important;
     }
     button {
-        color: #1f1f1f !important;
+        color: #ffffff !important;
     }
     button:not([kind="primary"]):not([class*="primary"]) {
-        color: #1f1f1f !important;
+        color: #ffffff !important;
     }
     .stButton button[kind="primary"], button[kind="primary"] {
         color: #ffffff !important;
@@ -125,13 +125,14 @@ if st.session_state.get('theme') == 'light':
         font-weight: 700 !important;
     }
     .stButton button[kind="secondary"] {
-        color: #1f1f1f !important;
+        color: #ffffff !important;
         background-color: #f0f0f0 !important;
         border: 1px solid #d0d0d0 !important;
     }
     [data-testid="stColorBlock"] {
         border: 1px solid #d0d0d0 !important;
         border-radius: 4px !important;
+        background-color: #ffffff !important;
     }
     [data-testid="stFileUploadDropzone"] {
         background-color: #f8f9fa !important;
@@ -161,24 +162,40 @@ if st.session_state.get('theme') == 'light':
     .stFileUploadDropzone p, .stFileUploadDropzone span {
         color: #1f1f1f !important;
     }
-    input[type="color"], [data-testid="stColorPicker"] {
+    input[type="color"] {
         background-color: #ffffff !important;
-        width: 60px !important;
-        height: 40px !important;
-        border: 2px solid #d0d0d0 !important;
+        width: 50px !important;
+        height: 35px !important;
+        border: 2px solid #999 !important;
         cursor: pointer !important;
         border-radius: 4px !important;
+        padding: 2px !important;
     }
     [data-testid="stColorPicker"] {
         background-color: #ffffff !important;
     }
     [data-testid="stColorPicker"] input {
         background-color: #ffffff !important;
-        border: 2px solid #d0d0d0 !important;
+        border: 2px solid #999 !important;
+    }
+    [data-testid="stColorPicker"] input[type="color"] {
+        background-color: #ffffff !important;
+        border: 2px solid #999 !important;
     }
     .stColorPicker input {
         background-color: #ffffff !important;
-        border: 2px solid #d0d0d0 !important;
+        border: 2px solid #999 !important;
+    }
+    .stColorPicker input[type="color"] {
+        background-color: #ffffff !important;
+        border: 2px solid #999 !important;
+    }
+    [data-baseweb="popover"] {
+        background-color: #ffffff !important;
+    }
+    [data-baseweb="popover"] svg, [data-baseweb="popover"] div {
+        background-color: #ffffff !important;
+        color: #1f1f1f !important;
     }
     """
 

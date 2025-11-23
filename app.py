@@ -7,7 +7,7 @@ from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown,
 import os
 import json
 from dotenv import load_dotenv
-from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
+from database import SessionLocal, Project, DesignVariant, Recommendation, PublicGallery, init_db
 from datetime import datetime, timedelta
 
 def get_moscow_time():
@@ -237,6 +237,57 @@ def get_design_image_bytes(design_url: str) -> bytes:
         response = requests.get(design_url, timeout=10)
         return response.content
 
+def share_project_to_gallery(description: str = ""):
+    """Загружает проект в публичную галерею"""
+    if not st.session_state.user_id or not st.session_state.uploaded_image_b64:
+        return False
+    
+    db = SessionLocal()
+    try:
+        selected_design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
+        design_image_bytes = get_design_image_bytes(selected_design_url)
+        design_image_b64 = base64.b64encode(design_image_bytes).decode('utf-8')
+        
+        gallery_item = PublicGallery(
+            user_id=st.session_state.user_id,
+            username=st.session_state.username,
+            room_type=st.session_state.room_type,
+            purpose=st.session_state.purpose,
+            before_image_b64=st.session_state.uploaded_image_b64,
+            after_image_b64=design_image_b64,
+            description=description
+        )
+        db.add(gallery_item)
+        db.commit()
+        return True
+    except Exception as e:
+        print(f"Ошибка при добавлении в галерею: {e}")
+        return False
+    finally:
+        db.close()
+
+def get_gallery_items(limit: int = 50):
+    """Получает последние проекты из публичной галереи"""
+    db = SessionLocal()
+    try:
+        items = db.query(PublicGallery).order_by(PublicGallery.created_at.desc()).limit(limit).all()
+        db.close()
+        return [(
+            item.username,
+            item.room_type,
+            item.purpose,
+            item.created_at,
+            item.before_image_b64,
+            item.after_image_b64,
+            item.description
+        ) for item in items]
+    except Exception as e:
+        print(f"Ошибка при получении галереи: {e}")
+        return []
+    finally:
+        if db:
+            db.close()
+
 def auto_save_project():
     if not st.session_state.auto_save_enabled or not st.session_state.analysis or not st.session_state.user_id:
         return
@@ -328,21 +379,66 @@ if not st.session_state.user_id:
     
     st.stop()
 
-col1, col2, col3 = st.columns([4, 1, 1])
+col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
 with col1:
     st.markdown(f"**Пользователь:** {st.session_state.username}")
 with col2:
+    if st.button("📷 Галерея", key="gallery_btn"):
+        st.session_state.show_gallery = not st.session_state.get('show_gallery', False)
+        st.rerun()
+with col3:
     theme_icon = "🌙" if st.session_state.theme == 'light' else "☀️"
     if st.button(f"{theme_icon} Тема", key="theme_btn"):
         st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
         st.rerun()
-with col3:
+with col4:
+    if st.button("❓ Помощь", key="help_btn"):
+        st.session_state.show_help = not st.session_state.get('show_help', False)
+        st.rerun()
+with col5:
     if st.button("Выйти", key="logout_btn"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
 
 st.markdown("Загрузите фото помещения и получите профессиональный дизайн-проект")
+
+if st.session_state.get('show_gallery', False):
+    st.divider()
+    st.header("📷 Публичная галерея проектов")
+    st.markdown("Вдохновляйтесь успешными проектами других пользователей!")
+    
+    gallery_items = get_gallery_items()
+    
+    if gallery_items:
+        for username, room_type, purpose, created_at, before_b64, after_b64, description in gallery_items:
+            with st.container(border=True):
+                col1, col2, col3 = st.columns([1, 1, 1])
+                
+                with col1:
+                    st.subheader(f"👤 {username}")
+                    st.caption(f"🏠 {room_type}")
+                    if purpose:
+                        st.caption(f"💡 {purpose[:100]}...")
+                    st.caption(f"📅 {created_at.strftime('%d.%m.%Y %H:%M')}")
+                
+                with col2:
+                    st.markdown("**До ремонта:**")
+                    before_img = Image.open(io.BytesIO(base64.b64decode(before_b64)))
+                    st.image(before_img, use_container_width=True)
+                
+                with col3:
+                    st.markdown("**После дизайна:**")
+                    after_img = Image.open(io.BytesIO(base64.b64decode(after_b64)))
+                    st.image(after_img, use_container_width=True)
+                
+                if description:
+                    st.markdown("**📝 Описание проекта:**")
+                    st.markdown(description)
+    else:
+        st.info("📭 Галерея пока пуста. Будьте первым, кто поделится своим проектом!")
+    
+    st.divider()
 
 with st.sidebar:
     st.header("📋 Управление проектами")
@@ -874,7 +970,7 @@ if st.session_state.images:
         
         st.divider()
         
-        col1, col2 = st.columns([1, 1])
+        col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             if st.button("📥 Экспортировать в PDF", type="primary", key="export_pdf", use_container_width=True):
                 try:
@@ -903,3 +999,40 @@ if st.session_state.images:
                             st.success("✅ PDF готов к скачиванию!")
                 except Exception as e:
                     st.error(f"Ошибка при экспорте: {str(e)}")
+        
+        with col2:
+            if st.button("🎨 Редактировать дизайн", type="secondary", key="edit_design_btn", use_container_width=True):
+                st.session_state.show_edit_modal = True
+                st.rerun()
+        
+        with col3:
+            if st.button("🌐 Поделиться в галерее", type="secondary", key="share_gallery_btn", use_container_width=True):
+                st.session_state.show_share_modal = True
+                st.rerun()
+        
+        if st.session_state.get('show_share_modal', False):
+            st.divider()
+            st.header("🌐 Поделиться дизайном в галерее")
+            
+            share_description = st.text_area(
+                "📝 Добавьте описание вашего проекта",
+                placeholder="Например: Превратил тесную комнату в уютный кабинет с хорошим освещением",
+                height=80,
+                key="share_description"
+            )
+            
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("✅ Опубликовать", type="primary", use_container_width=True, key="publish_to_gallery"):
+                    if share_project_to_gallery(share_description):
+                        st.success("✨ Проект успешно добавлен в галерею!")
+                        st.session_state.show_share_modal = False
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error("❌ Ошибка при добавлении в галерею")
+            
+            with col2:
+                if st.button("❌ Отмена", use_container_width=True, key="cancel_share"):
+                    st.session_state.show_share_modal = False
+                    st.rerun()

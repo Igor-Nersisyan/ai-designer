@@ -63,12 +63,15 @@ if st.session_state.get('theme') == 'light':
     }
     [data-testid="stSelectbox"] div {
         background-color: #ffffff !important;
+        color: #1f1f1f !important;
     }
     [data-testid="stSelectbox"] {
         background-color: #ffffff !important;
+        color: #1f1f1f !important;
     }
     .stSelectbox [data-baseweb="select"] {
         background-color: #ffffff !important;
+        color: #1f1f1f !important;
     }
     .stSelectbox [data-baseweb="select"] div {
         background-color: #ffffff !important;
@@ -78,12 +81,44 @@ if st.session_state.get('theme') == 'light':
         background-color: #ffffff !important;
         color: #1f1f1f !important;
     }
+    [data-baseweb="select"] {
+        background-color: #ffffff !important;
+        color: #1f1f1f !important;
+    }
+    [data-baseweb="select"] > div {
+        background-color: #ffffff !important;
+        color: #1f1f1f !important;
+    }
+    [data-baseweb="popover"] {
+        background-color: #ffffff !important;
+    }
+    [data-baseweb="popover"] > div {
+        background-color: #ffffff !important;
+    }
+    [role="listbox"] {
+        background-color: #ffffff !important;
+        color: #1f1f1f !important;
+    }
+    [role="option"] {
+        background-color: #ffffff !important;
+        color: #1f1f1f !important;
+    }
+    [role="option"]:hover {
+        background-color: #e8e8e8 !important;
+        color: #1f1f1f !important;
+    }
     .stButton button {
         color: #1f1f1f !important;
         background-color: #ffffff !important;
         border: 1px solid #ddd !important;
     }
-    .stButton button[kind="primary"] {
+    button {
+        color: #1f1f1f !important;
+    }
+    button:not([kind="primary"]):not([class*="primary"]) {
+        color: #1f1f1f !important;
+    }
+    .stButton button[kind="primary"], button[kind="primary"] {
         color: #ffffff !important;
         background-color: #1f77b4 !important;
         border: none !important;
@@ -97,6 +132,16 @@ if st.session_state.get('theme') == 'light':
     [data-testid="stColorBlock"] {
         border: 1px solid #d0d0d0 !important;
         border-radius: 4px !important;
+    }
+    [data-testid="stFileUploadDropzone"] {
+        background-color: #f8f9fa !important;
+        border: 2px dashed #d0d0d0 !important;
+        color: #1f1f1f !important;
+    }
+    .stFileUploadDropzone {
+        background-color: #f8f9fa !important;
+        border-color: #d0d0d0 !important;
+        color: #1f1f1f !important;
     }
     """
 

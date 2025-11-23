@@ -138,10 +138,47 @@ if st.session_state.get('theme') == 'light':
         border: 2px dashed #d0d0d0 !important;
         color: #1f1f1f !important;
     }
+    [data-testid="stFileUploadDropzone"] > div {
+        background-color: #f8f9fa !important;
+        color: #1f1f1f !important;
+    }
+    [data-testid="stFileUploadDropzone"] > div > div {
+        background-color: #f8f9fa !important;
+        color: #1f1f1f !important;
+    }
     .stFileUploadDropzone {
         background-color: #f8f9fa !important;
         border-color: #d0d0d0 !important;
         color: #1f1f1f !important;
+    }
+    .stFileUploadDropzone div {
+        background-color: #f8f9fa !important;
+        color: #1f1f1f !important;
+    }
+    [data-testid="stFileUploadDropzone"] p, [data-testid="stFileUploadDropzone"] span {
+        color: #1f1f1f !important;
+    }
+    .stFileUploadDropzone p, .stFileUploadDropzone span {
+        color: #1f1f1f !important;
+    }
+    input[type="color"], [data-testid="stColorPicker"] {
+        background-color: #ffffff !important;
+        width: 60px !important;
+        height: 40px !important;
+        border: 2px solid #d0d0d0 !important;
+        cursor: pointer !important;
+        border-radius: 4px !important;
+    }
+    [data-testid="stColorPicker"] {
+        background-color: #ffffff !important;
+    }
+    [data-testid="stColorPicker"] input {
+        background-color: #ffffff !important;
+        border: 2px solid #d0d0d0 !important;
+    }
+    .stColorPicker input {
+        background-color: #ffffff !important;
+        border: 2px solid #d0d0d0 !important;
     }
     """
 

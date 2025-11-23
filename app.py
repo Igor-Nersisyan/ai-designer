@@ -107,36 +107,32 @@ if st.session_state.get('theme') == 'light':
         background-color: #e8e8e8 !important;
         color: #1f1f1f !important;
     }
-    .stButton button {
-        color: #ffffff !important;
-        background-color: #ffffff !important;
-        border: 1px solid #ddd !important;
-    }
-    button {
+    .stButton > button {
         color: #ffffff !important;
     }
-    button:not([kind="primary"]):not([class*="primary"]) {
-        color: #ffffff !important;
-    }
-    .stButton button[kind="primary"], button[kind="primary"] {
+    .stButton > button[kind="primary"] {
         color: #ffffff !important;
         background-color: #1f77b4 !important;
         border: none !important;
         font-weight: 700 !important;
     }
-    .stButton button[kind="secondary"] {
+    .stButton > button[kind="secondary"] {
         color: #ffffff !important;
         background-color: #f0f0f0 !important;
         border: 1px solid #d0d0d0 !important;
     }
     [data-testid="stColorBlock"] {
-        border: 1px solid #d0d0d0 !important;
-        border-radius: 4px !important;
-        background-color: #ffffff !important;
+        border: 3px solid #333333 !important;
+        border-radius: 6px !important;
+        outline: 1px solid #1f1f1f !important;
     }
     [data-testid="stFileUploadDropzone"] {
         background-color: #f8f9fa !important;
-        border: 2px dashed #d0d0d0 !important;
+        border: 2px dashed #999999 !important;
+        color: #1f1f1f !important;
+    }
+    [data-testid="stFileUploadDropzone"] * {
+        background-color: #f8f9fa !important;
         color: #1f1f1f !important;
     }
     [data-testid="stFileUploadDropzone"] > div {
@@ -149,7 +145,11 @@ if st.session_state.get('theme') == 'light':
     }
     .stFileUploadDropzone {
         background-color: #f8f9fa !important;
-        border-color: #d0d0d0 !important;
+        border-color: #999999 !important;
+        color: #1f1f1f !important;
+    }
+    .stFileUploadDropzone * {
+        background-color: #f8f9fa !important;
         color: #1f1f1f !important;
     }
     .stFileUploadDropzone div {
@@ -162,41 +162,6 @@ if st.session_state.get('theme') == 'light':
     .stFileUploadDropzone p, .stFileUploadDropzone span {
         color: #1f1f1f !important;
     }
-    input[type="color"] {
-        background-color: #ffffff !important;
-        width: 50px !important;
-        height: 35px !important;
-        border: 2px solid #999 !important;
-        cursor: pointer !important;
-        border-radius: 4px !important;
-        padding: 2px !important;
-    }
-    [data-testid="stColorPicker"] {
-        background-color: #ffffff !important;
-    }
-    [data-testid="stColorPicker"] input {
-        background-color: #ffffff !important;
-        border: 2px solid #999 !important;
-    }
-    [data-testid="stColorPicker"] input[type="color"] {
-        background-color: #ffffff !important;
-        border: 2px solid #999 !important;
-    }
-    .stColorPicker input {
-        background-color: #ffffff !important;
-        border: 2px solid #999 !important;
-    }
-    .stColorPicker input[type="color"] {
-        background-color: #ffffff !important;
-        border: 2px solid #999 !important;
-    }
-    [data-baseweb="popover"] {
-        background-color: #ffffff !important;
-    }
-    [data-baseweb="popover"] svg, [data-baseweb="popover"] div {
-        background-color: #ffffff !important;
-        color: #1f1f1f !important;
-    }
     """
 
 st.markdown(f"""
@@ -207,6 +172,10 @@ st.markdown(f"""
     border-radius: 8px;
     height: 3em;
     font-weight: 600;
+    color: #ffffff !important;
+}}
+.stButton button {{
+    color: #ffffff !important;
 }}
 .main .block-container {{
     max-width: 1400px;

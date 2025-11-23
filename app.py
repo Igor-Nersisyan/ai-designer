@@ -3,11 +3,11 @@ import base64
 from PIL import Image
 import io
 from prompts import SYSTEM_PROMPT_ANALYZER, SYSTEM_PROMPT_BANANA_ENGINEER, SYSTEM_PROMPT_REFINE_ENGINEER
-from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision, generate_design_project_pdf, create_before_after_comparison, track_achievement, get_achievement_details
+from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown, call_gemini, generate_image, refine_design_with_vision, generate_design_project_pdf, create_before_after_comparison
 import os
 import json
 from dotenv import load_dotenv
-from database import SessionLocal, Project, DesignVariant, Recommendation, Achievement, init_db
+from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
 from datetime import datetime, timedelta
 
 def get_moscow_time():
@@ -226,63 +226,6 @@ if 'username' not in st.session_state:
     st.session_state.username = None
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
-if 'achievement_notification' not in st.session_state:
-    st.session_state.achievement_notification = None
-
-if st.session_state.achievement_notification:
-    html_content, title = st.session_state.achievement_notification
-    st.markdown(html_content, unsafe_allow_html=True)
-    st.session_state.achievement_notification = None
-
-def show_achievement_notification(achievement_type: str):
-    """Display beautiful achievement notification"""
-    details = get_achievement_details(st.session_state.user_id, achievement_type)
-    
-    notification_html = f"""
-    <div style="
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        z-index: 9999;
-        font-size: 18px;
-        font-weight: 700;
-        max-width: 350px;
-        border: 2px solid #fff;
-        animation: slideIn 0.5s ease-out;
-    " id="achievement-notification">
-        <div style="font-size: 48px; text-align: center; margin-bottom: 12px;">
-            {details['icon']}
-        </div>
-        <div style="text-align: center; font-size: 16px; font-weight: 700; margin-bottom: 8px;">
-            🎉 ДОСТИЖЕНИЕ РАЗБЛОКИРОВАНО!
-        </div>
-        <div style="text-align: center; font-size: 18px; margin-bottom: 12px;">
-            {details['title'].split()[1:] if len(details['title'].split()) > 1 else details['title']}
-        </div>
-        <div style="text-align: center; font-size: 14px; opacity: 0.95;">
-            {details['description']}
-        </div>
-    </div>
-    <style>
-        @keyframes slideIn {{
-            from {{
-                transform: translateX(400px);
-                opacity: 0;
-            }}
-            to {{
-                transform: translateX(0);
-                opacity: 1;
-            }}
-        }}
-    </style>
-    """
-    
-    st.session_state.achievement_notification = (notification_html, details['title'])
 
 def get_design_image_bytes(design_url: str) -> bytes:
     """Вспомогательная функция для извлечения байтов изображения из URL"""
@@ -657,56 +600,6 @@ Create the prompt now.""",
                     })
                     
                     auto_save_project()
-                    
-                    if st.session_state.user_id:
-                        is_unlocked, count = track_achievement(st.session_state.user_id, 'generations_5', 5)
-                        if is_unlocked:
-                            show_achievement_notification('generations_5')
-                        
-                        first_proj_unlocked, _ = track_achievement(st.session_state.user_id, 'first_project', 1)
-                        if first_proj_unlocked:
-                            show_achievement_notification('first_project')
-                        
-                        projects_3_unlocked, proj_count = track_achievement(st.session_state.user_id, 'projects_3', 3)
-                        if projects_3_unlocked:
-                            show_achievement_notification('projects_3')
-                        
-                        all_available_styles = {"Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прованс", "Нейтральный"}
-                        used_styles_set = set(styles) & all_available_styles
-                        if len(used_styles_set) > 0:
-                            db = SessionLocal()
-                            user_achievement = db.query(Achievement).filter(
-                                Achievement.user_id == st.session_state.user_id,
-                                Achievement.achievement_type == 'all_styles'
-                            ).first()
-                            
-                            if not user_achievement:
-                                user_achievement = Achievement(
-                                    user_id=st.session_state.user_id, 
-                                    achievement_type='all_styles',
-                                    count=len(used_styles_set),
-                                    unlocked=json.dumps(list(used_styles_set))
-                                )
-                                db.add(user_achievement)
-                            else:
-                                try:
-                                    all_used_styles = set(json.loads(user_achievement.unlocked or '[]'))
-                                except:
-                                    all_used_styles = set()
-                                all_used_styles.update(used_styles_set)
-                                user_achievement.count = len(all_used_styles)
-                                user_achievement.unlocked = json.dumps(list(all_used_styles))
-                            
-                            db.commit()
-                            
-                            if user_achievement.count >= len(all_available_styles) and user_achievement.unlocked_at is None:
-                                user_achievement.unlocked = 'yes'
-                                user_achievement.unlocked_at = datetime.utcnow()
-                                db.commit()
-                                show_achievement_notification('all_styles')
-                            
-                            db.close()
-                    
                     st.success("✅ Дизайн-проект создан!")
                     st.rerun()
                 except Exception as e:
@@ -738,12 +631,6 @@ if st.session_state.images:
                     )
                     
                     if st.button("🔄 Перегенерировать", key=f"regen_{idx}", use_container_width=True):
-                        if edited_prompt != img_data['prompt']:
-                            if st.session_state.user_id:
-                                edits_unlocked, edits_count = track_achievement(st.session_state.user_id, 'edits_3', 3)
-                                if edits_unlocked:
-                                    show_achievement_notification('edits_3')
-                        
                         with st.spinner("🎨 Генерирую новый вариант..."):
                             try:
                                 design_image_bytes = get_design_image_bytes(img_data['url'])
@@ -1002,11 +889,6 @@ if st.session_state.images:
                                 st.session_state.saved_shopping_list,
                                 design_url
                             )
-                            
-                            if st.session_state.user_id:
-                                pdf_unlocked, pdf_count = track_achievement(st.session_state.user_id, 'pdf_3', 3)
-                                if pdf_unlocked:
-                                    show_achievement_notification('pdf_3')
                             
                             moscow_time = get_moscow_time()
                             filename = f"design_project_{moscow_time.strftime('%d_%m_%Y_%H_%M')}.pdf"

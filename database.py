@@ -58,18 +58,6 @@ class Recommendation(Base):
     
     project = relationship("Project", back_populates="recommendations")
 
-class Achievement(Base):
-    __tablename__ = "achievements"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String, nullable=False, index=True)
-    achievement_type = Column(String, nullable=False)
-    count = Column(Integer, default=0)
-    unlocked = Column(String, default=None)
-    unlocked_at = Column(DateTime, default=None)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
 def init_db():
     try:
         Base.metadata.create_all(bind=engine)

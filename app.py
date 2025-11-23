@@ -229,6 +229,11 @@ if 'theme' not in st.session_state:
 if 'achievement_notification' not in st.session_state:
     st.session_state.achievement_notification = None
 
+if st.session_state.achievement_notification:
+    html_content, title = st.session_state.achievement_notification
+    st.markdown(html_content, unsafe_allow_html=True)
+    st.session_state.achievement_notification = None
+
 def show_achievement_notification(achievement_type: str):
     """Display beautiful achievement notification"""
     details = get_achievement_details(st.session_state.user_id, achievement_type)
@@ -666,26 +671,40 @@ Create the prompt now.""",
                         if projects_3_unlocked:
                             show_achievement_notification('projects_3')
                         
-                        used_styles_set = set(styles)
-                        all_available_styles = {"Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прovanс", "Нейтральный"}
+                        all_available_styles = {"Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прованс", "Нейтральный"}
+                        used_styles_set = set(styles) & all_available_styles
                         if len(used_styles_set) > 0:
                             db = SessionLocal()
-                            user_styles = db.query(Achievement).filter(
+                            user_achievement = db.query(Achievement).filter(
                                 Achievement.user_id == st.session_state.user_id,
                                 Achievement.achievement_type == 'all_styles'
                             ).first()
-                            if not user_styles:
-                                user_styles = Achievement(user_id=st.session_state.user_id, achievement_type='all_styles', count=len(used_styles_set))
-                                db.add(user_styles)
-                            else:
-                                user_styles.count = max(user_styles.count, len(used_styles_set))
                             
-                            if user_styles.count >= len(all_available_styles) and not user_styles.unlocked:
-                                user_styles.unlocked = 'yes'
-                                user_styles.unlocked_at = datetime.utcnow()
+                            if not user_achievement:
+                                user_achievement = Achievement(
+                                    user_id=st.session_state.user_id, 
+                                    achievement_type='all_styles',
+                                    count=len(used_styles_set),
+                                    unlocked=json.dumps(list(used_styles_set))
+                                )
+                                db.add(user_achievement)
+                            else:
+                                try:
+                                    all_used_styles = set(json.loads(user_achievement.unlocked or '[]'))
+                                except:
+                                    all_used_styles = set()
+                                all_used_styles.update(used_styles_set)
+                                user_achievement.count = len(all_used_styles)
+                                user_achievement.unlocked = json.dumps(list(all_used_styles))
+                            
+                            db.commit()
+                            
+                            if user_achievement.count >= len(all_available_styles) and user_achievement.unlocked_at is None:
+                                user_achievement.unlocked = 'yes'
+                                user_achievement.unlocked_at = datetime.utcnow()
                                 db.commit()
                                 show_achievement_notification('all_styles')
-                            db.commit()
+                            
                             db.close()
                     
                     st.success("✅ Дизайн-проект создан!")

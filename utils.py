@@ -570,3 +570,125 @@ def generate_design_project_pdf(room_type: str, recommendations: str, shopping_l
         
     except Exception as e:
         raise Exception(f"Ошибка при генерации PDF: {str(e)}")
+
+def track_achievement(user_id: str, achievement_type: str, target_count: int = None):
+    """Track and unlock achievements when milestones are reached.
+    
+    Args:
+        user_id: User ID
+        achievement_type: Type of achievement (e.g., 'first_project', 'projects_3', etc)
+        target_count: Optional target count for milestone achievements
+    
+    Returns:
+        Tuple (is_newly_unlocked, current_count)
+    """
+    from database import SessionLocal, Achievement
+    from datetime import datetime
+    
+    try:
+        db = SessionLocal()
+        
+        achievement = db.query(Achievement).filter(
+            Achievement.user_id == user_id,
+            Achievement.achievement_type == achievement_type
+        ).first()
+        
+        if not achievement:
+            achievement = Achievement(
+                user_id=user_id,
+                achievement_type=achievement_type,
+                count=1,
+                unlocked=None
+            )
+            db.add(achievement)
+        else:
+            achievement.count += 1
+        
+        current_count = achievement.count
+        is_newly_unlocked = False
+        
+        if target_count and current_count >= target_count and not achievement.unlocked:
+            achievement.unlocked = 'yes'
+            achievement.unlocked_at = datetime.utcnow()
+            is_newly_unlocked = True
+        
+        db.commit()
+        db.close()
+        
+        return is_newly_unlocked, current_count
+    except Exception as e:
+        print(f"Error tracking achievement: {e}")
+        return False, 0
+
+def get_achievement_details(user_id: str, achievement_type: str):
+    """Get achievement details for display.
+    
+    Returns:
+        Dict with title, description, icon, target_count, current_count, unlocked
+    """
+    from database import SessionLocal, Achievement
+    
+    db = SessionLocal()
+    
+    achievement_data = {
+        'first_project': {
+            'title': '🎯 Первый проект',
+            'description': 'Создал свой первый дизайн-проект',
+            'icon': '🎯',
+            'target': 1
+        },
+        'projects_3': {
+            'title': '🌟 Триумф трёх проектов',
+            'description': 'Создал 3 дизайн-проекта',
+            'icon': '🌟',
+            'target': 3
+        },
+        'generations_5': {
+            'title': '✨ Мастер вариаций',
+            'description': 'Сгенерировал 5 вариантов дизайна',
+            'icon': '✨',
+            'target': 5
+        },
+        'all_styles': {
+            'title': '🎨 Универсал стилей',
+            'description': 'Использовал все доступные стили дизайна',
+            'icon': '🎨',
+            'target': 1
+        },
+        'pdf_3': {
+            'title': '📄 Коллекционер PDF',
+            'description': 'Экспортировал в PDF 3 раза',
+            'icon': '📄',
+            'target': 3
+        },
+        'edits_3': {
+            'title': '✏️ Перфекционист',
+            'description': 'Отредактировал промпт 3 раза',
+            'icon': '✏️',
+            'target': 3
+        }
+    }
+    
+    achievement = db.query(Achievement).filter(
+        Achievement.user_id == user_id,
+        Achievement.achievement_type == achievement_type
+    ).first()
+    
+    data = achievement_data.get(achievement_type, {
+        'title': achievement_type,
+        'description': 'Достижение',
+        'icon': '🏆',
+        'target': 1
+    })
+    
+    if achievement:
+        data['current'] = achievement.count
+        data['unlocked'] = achievement.unlocked == 'yes'
+        data['progress'] = min(100, int((achievement.count / data['target']) * 100))
+    else:
+        data['current'] = 0
+        data['unlocked'] = False
+        data['progress'] = 0
+    
+    db.close()
+    return data

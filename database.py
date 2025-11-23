@@ -58,19 +58,6 @@ class Recommendation(Base):
     
     project = relationship("Project", back_populates="recommendations")
 
-class PublicGallery(Base):
-    __tablename__ = "public_gallery"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String, nullable=False, index=True)
-    username = Column(String, nullable=False)
-    room_type = Column(String, nullable=False)
-    purpose = Column(Text)
-    before_image_b64 = Column(Text, nullable=False)
-    after_image_b64 = Column(Text, nullable=False)
-    description = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-
 def init_db():
     try:
         Base.metadata.create_all(bind=engine)

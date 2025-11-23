@@ -7,7 +7,7 @@ from utils import encode_image, call_gemini_vision, call_gemini_vision_markdown,
 import os
 import json
 from dotenv import load_dotenv
-from database import SessionLocal, Project, DesignVariant, Recommendation, GalleryPost, init_db
+from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
 from datetime import datetime, timedelta
 
 def get_moscow_time():
@@ -226,12 +226,6 @@ if 'username' not in st.session_state:
     st.session_state.username = None
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
-if 'show_share_modal' not in st.session_state:
-    st.session_state.show_share_modal = False
-if 'show_gallery' not in st.session_state:
-    st.session_state.show_gallery = False
-if 'selected_gallery_post_id' not in st.session_state:
-    st.session_state.selected_gallery_post_id = None
 
 def get_design_image_bytes(design_url: str) -> bytes:
     """Вспомогательная функция для извлечения байтов изображения из URL"""
@@ -242,42 +236,6 @@ def get_design_image_bytes(design_url: str) -> bytes:
         import requests
         response = requests.get(design_url, timeout=10)
         return response.content
-
-def publish_to_gallery(before_image_b64, after_image_b64, title="", description=""):
-    """Опубликовать проект в галерею"""
-    db = SessionLocal()
-    try:
-        gallery_post = GalleryPost(
-            user_id=st.session_state.user_id,
-            username=st.session_state.username,
-            project_id=st.session_state.current_project_id,
-            before_image_b64=before_image_b64,
-            after_image_b64=after_image_b64,
-            room_type=st.session_state.room_type,
-            title=title or f"Проект {st.session_state.username} - {st.session_state.room_type}",
-            description=description
-        )
-        db.add(gallery_post)
-        db.commit()
-        return True
-    except Exception as e:
-        print(f"Ошибка при публикации в галерею: {e}")
-        db.rollback()
-        return False
-    finally:
-        db.close()
-
-def get_gallery_posts(limit=12):
-    """Получить последние посты из галереи"""
-    db = SessionLocal()
-    try:
-        posts = db.query(GalleryPost).order_by(GalleryPost.created_at.desc()).limit(limit).all()
-        return posts
-    except Exception as e:
-        print(f"Ошибка при получении галереи: {e}")
-        return []
-    finally:
-        db.close()
 
 def auto_save_project():
     if not st.session_state.auto_save_enabled or not st.session_state.analysis or not st.session_state.user_id:
@@ -916,7 +874,7 @@ if st.session_state.images:
         
         st.divider()
         
-        col1, col2, col3 = st.columns([1, 1, 1])
+        col1, col2 = st.columns([1, 1])
         with col1:
             if st.button("📥 Экспортировать в PDF", type="primary", key="export_pdf", use_container_width=True):
                 try:
@@ -945,165 +903,3 @@ if st.session_state.images:
                             st.success("✅ PDF готов к скачиванию!")
                 except Exception as e:
                     st.error(f"Ошибка при экспорте: {str(e)}")
-        
-        with col2:
-            if st.button("🎨 Поделиться дизайном", type="secondary", key="share_design_btn", use_container_width=True):
-                st.session_state.show_share_modal = True
-        
-        with col3:
-            if st.button("📸 Галерея проектов", key="view_gallery_btn", use_container_width=True):
-                st.session_state.show_gallery = True
-        
-        # Модальное окно для публикации в галерею
-        if st.session_state.get('show_share_modal', False):
-            st.markdown("---")
-            st.subheader("📤 Поделиться своим дизайном")
-            
-            share_title = st.text_input(
-                "Название проекта",
-                placeholder="Например: Современная гостиная",
-                key="share_title"
-            )
-            
-            share_description = st.text_area(
-                "Описание (опционально)",
-                placeholder="Расскажите о вашем дизайне...",
-                height=80,
-                key="share_description"
-            )
-            
-            col_yes, col_no = st.columns([1, 1])
-            with col_yes:
-                if st.button("✅ Опубликовать", type="primary", use_container_width=True, key="confirm_share"):
-                    if share_title:
-                        with st.spinner("📤 Загружаю в галерею..."):
-                            success = publish_to_gallery(
-                                st.session_state.uploaded_image_b64,
-                                st.session_state.images[st.session_state.selected_variant_idx]['url'],
-                                share_title,
-                                share_description
-                            )
-                            if success:
-                                st.success("✅ Дизайн успешно опубликован! Посмотрите его в галерее.")
-                                st.session_state.show_share_modal = False
-                                st.rerun()
-                            else:
-                                st.error("❌ Ошибка при публикации. Попробуйте позже.")
-                    else:
-                        st.error("❌ Введите название проекта")
-            
-            with col_no:
-                if st.button("❌ Отмена", use_container_width=True, key="cancel_share"):
-                    st.session_state.show_share_modal = False
-                    st.rerun()
-
-# Раздел галереи проектов
-st.markdown("---")
-st.header("📸 Галерея проектов")
-st.markdown("Посмотрите, какие дизайны создали другие пользователи!")
-
-gallery_posts = get_gallery_posts(24)
-
-if gallery_posts:
-    # Создаем сетку 3x3 для отображения проектов
-    cols = st.columns(3)
-    for idx, post in enumerate(gallery_posts):
-        col = cols[idx % 3]
-        with col:
-            with st.container(border=True):
-                # Преобразуем base64 в байты для отображения
-                try:
-                    if post.after_image_b64.startswith('data:image'):
-                        header, encoded = post.after_image_b64.split(',', 1)
-                        after_image_bytes = base64.b64decode(encoded)
-                    else:
-                        after_image_bytes = base64.b64decode(post.after_image_b64)
-                    
-                    after_image = Image.open(io.BytesIO(after_image_bytes))
-                    st.image(after_image, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Ошибка при загрузке изображения: {str(e)}")
-                
-                # Информация о проекте
-                st.subheader(post.title)
-                st.caption(f"👤 **{post.username}** | 🏠 {post.room_type}")
-                
-                if post.description:
-                    st.markdown(f"_{post.description}_")
-                
-                # Дата публикации
-                moscow_time = get_moscow_time()
-                post_time = post.created_at
-                if post_time.tzinfo is None:
-                    post_time = post_time.replace(tzinfo=None)
-                time_diff = moscow_time.replace(tzinfo=None) - post_time
-                
-                if time_diff.days > 0:
-                    time_str = f"{time_diff.days}d ago"
-                elif time_diff.seconds > 3600:
-                    time_str = f"{time_diff.seconds // 3600}h ago"
-                elif time_diff.seconds > 60:
-                    time_str = f"{time_diff.seconds // 60}m ago"
-                else:
-                    time_str = "just now"
-                
-                st.caption(f"⏰ {time_str}")
-                
-                # Кнопка просмотра полного проекта
-                if st.button("👁️ Посмотреть до/после", key=f"view_post_{post.id}"):
-                    st.session_state.selected_gallery_post_id = post.id
-                    st.rerun()
-else:
-    st.info("📭 Галерея пока пуста. Будьте первым, кто поделится своим дизайном!")
-
-# Модальное окно для просмотра полного проекта
-if st.session_state.get('selected_gallery_post_id'):
-    db = SessionLocal()
-    try:
-        post = db.query(GalleryPost).filter(
-            GalleryPost.id == st.session_state.selected_gallery_post_id
-        ).first()
-        
-        if post:
-            st.markdown("---")
-            st.header(f"📋 {post.title}")
-            st.caption(f"👤 **{post.username}** | 🏠 {post.room_type}")
-            
-            if post.description:
-                st.markdown(f"**Описание:** {post.description}")
-            
-            # Отображение до/после
-            col_before, col_after = st.columns([1, 1])
-            
-            with col_before:
-                st.subheader("До ремонта")
-                try:
-                    if post.before_image_b64.startswith('data:image'):
-                        header, encoded = post.before_image_b64.split(',', 1)
-                        before_bytes = base64.b64decode(encoded)
-                    else:
-                        before_bytes = base64.b64decode(post.before_image_b64)
-                    before_image = Image.open(io.BytesIO(before_bytes))
-                    st.image(before_image, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Ошибка при загрузке: {str(e)}")
-            
-            with col_after:
-                st.subheader("После дизайна")
-                try:
-                    if post.after_image_b64.startswith('data:image'):
-                        header, encoded = post.after_image_b64.split(',', 1)
-                        after_bytes = base64.b64decode(encoded)
-                    else:
-                        after_bytes = base64.b64decode(post.after_image_b64)
-                    after_image = Image.open(io.BytesIO(after_bytes))
-                    st.image(after_image, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Ошибка при загрузке: {str(e)}")
-            
-            # Кнопка для закрытия
-            if st.button("← Вернуться в галерею", key="close_gallery_view"):
-                st.session_state.selected_gallery_post_id = None
-                st.rerun()
-    finally:
-        db.close()

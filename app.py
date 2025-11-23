@@ -9,7 +9,6 @@ import json
 from dotenv import load_dotenv
 from database import SessionLocal, Project, DesignVariant, Recommendation, init_db
 from datetime import datetime, timedelta
-from articles import get_articles_sorted_by_date, get_all_categories, get_articles_by_category, get_article_by_id
 
 def get_moscow_time():
     """Возвращает текущее время по Москве (UTC+3)"""
@@ -194,31 +193,6 @@ h1 {{
     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     margin-bottom: 1rem;
 }}
-.article-card {{
-    padding: 1.5rem;
-    border-radius: 10px;
-    border: 1px solid #e0e0e0;
-    margin-bottom: 1.5rem;
-    cursor: pointer;
-    transition: box-shadow 0.3s;
-}}
-.article-card:hover {{
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}}
-.article-title {{
-    font-size: 1.3em;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}}
-.article-meta {{
-    font-size: 0.9em;
-    color: #888;
-    margin-bottom: 0.8rem;
-}}
-.article-excerpt {{
-    font-size: 1em;
-    line-height: 1.5;
-}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -252,12 +226,6 @@ if 'username' not in st.session_state:
     st.session_state.username = None
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = 'design'
-if 'selected_article_id' not in st.session_state:
-    st.session_state.selected_article_id = None
-if 'articles_filter' not in st.session_state:
-    st.session_state.articles_filter = 'Все'
 
 def get_design_image_bytes(design_url: str) -> bytes:
     """Вспомогательная функция для извлечения байтов изображения из URL"""
@@ -374,19 +342,9 @@ with col3:
             del st.session_state[key]
         st.rerun()
 
+st.markdown("Загрузите фото помещения и получите профессиональный дизайн-проект")
+
 with st.sidebar:
-    st.header("🧭 Навигация")
-    current_page = st.radio(
-        "Выберите раздел",
-        ["🎨 Дизайн", "📚 Статьи"],
-        key="page_radio"
-    )
-    if "Дизайн" in current_page:
-        st.session_state.current_page = 'design'
-    elif "Статьи" in current_page:
-        st.session_state.current_page = 'articles'
-    
-    st.divider()
     st.header("📋 Управление проектами")
     
     db = SessionLocal()
@@ -513,47 +471,40 @@ with st.sidebar:
                     st.session_state.confirm_delete = False
                     st.rerun()
     
-    if st.session_state.current_page == 'design':
-        st.divider()
-        st.header("📋 Исходные данные")
-        
-        room_type = st.selectbox(
-            "Тип помещения",
-            ["Комната", "Кухня", "Ванная", "Гостиная", "Спальня", "Детская", "Кабинет", "Прихожая"],
-            key="room_type_select"
-        )
-        
-        uploaded_file = st.file_uploader(
-            "Загрузите фото помещения",
-            type=["jpg", "jpeg", "png"],
-            help="Перетащите файл сюда или нажмите для выбора. Четкое, хорошо освещенное фото"
-        )
-        
-        if uploaded_file:
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Загруженное фото", use_container_width=True)
-            uploaded_file.seek(0)
-            st.session_state.uploaded_image_bytes = uploaded_file.getvalue()
-            st.session_state.uploaded_image_b64 = encode_image(uploaded_file)
-        elif st.session_state.uploaded_image_b64:
-            image_bytes = base64.b64decode(st.session_state.uploaded_image_b64)
-            image = Image.open(io.BytesIO(image_bytes))
-            st.image(image, caption="Загруженное фото", use_container_width=True)
-        
-        purpose = st.text_area(
-            "Цель использования помещения",
-            placeholder="Например: хочу уютное место для работы из дома с хорошим освещением",
-            height=100
-        )
-        
-        has_image = uploaded_file is not None or st.session_state.uploaded_image_b64 is not None
-        analyze_button = st.button("🔍 Начать анализ", type="primary", disabled=not has_image)
-    else:
-        analyze_button = False
-        has_image = False
-        uploaded_file = None
-        room_type = None
-        purpose = ""
+    st.divider()
+    st.header("📋 Исходные данные")
+    
+    room_type = st.selectbox(
+        "Тип помещения",
+        ["Комната", "Кухня", "Ванная", "Гостиная", "Спальня", "Детская", "Кабинет", "Прихожая"],
+        key="room_type_select"
+    )
+    
+    uploaded_file = st.file_uploader(
+        "Загрузите фото помещения",
+        type=["jpg", "jpeg", "png"],
+        help="Перетащите файл сюда или нажмите для выбора. Четкое, хорошо освещенное фото"
+    )
+    
+    if uploaded_file:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Загруженное фото", use_container_width=True)
+        uploaded_file.seek(0)
+        st.session_state.uploaded_image_bytes = uploaded_file.getvalue()
+        st.session_state.uploaded_image_b64 = encode_image(uploaded_file)
+    elif st.session_state.uploaded_image_b64:
+        image_bytes = base64.b64decode(st.session_state.uploaded_image_b64)
+        image = Image.open(io.BytesIO(image_bytes))
+        st.image(image, caption="Загруженное фото", use_container_width=True)
+    
+    purpose = st.text_area(
+        "Цель использования помещения",
+        placeholder="Например: хочу уютное место для работы из дома с хорошим освещением",
+        height=100
+    )
+    
+    has_image = uploaded_file is not None or st.session_state.uploaded_image_b64 is not None
+    analyze_button = st.button("🔍 Начать анализ", type="primary", disabled=not has_image)
 
 if analyze_button and has_image:
     if st.session_state.analysis:
@@ -582,202 +533,201 @@ if analyze_button and has_image:
             st.error(f"Ошибка при анализе изображения: {str(e)}")
             st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
 
-if st.session_state.current_page == 'design':
-    st.title("🏠 AI-Дизайнер по ремонту")
-    st.markdown("Загрузите фото помещения и получите профессиональный дизайн-проект")
+if st.session_state.analysis:
+    st.header("📊 Анализ вашего помещения")
+    st.markdown(st.session_state.analysis)
     
-    if st.session_state.analysis:
-        st.header("📊 Анализ вашего помещения")
-        st.markdown(st.session_state.analysis)
-        
-        st.divider()
-        
-        st.header("🎨 Создание дизайн-проекта")
-        
-        col1, col2 = st.columns([2, 1])
-        
-        if 'selected_styles' not in st.session_state:
-            st.session_state.selected_styles = []
-        if 'selected_color' not in st.session_state:
-            default_color = "#CCCCCC" if st.session_state.get('theme') == 'light' else "#FFFFFF"
-            st.session_state.selected_color = default_color
-        
-        with col1:
-            styles = st.multiselect(
-                "Выберите стили (можно несколько)",
-                ["Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прованс", "Нейтральный"],
-                default=st.session_state.selected_styles,
-                help="Выберите хотя бы один стиль для создания дизайна",
-                key="styles_multiselect"
-            )
-            st.session_state.selected_styles = styles
-        
-        with col2:
-            main_color = st.color_picker("Основной цвет", st.session_state.selected_color, key="color_select")
-            st.session_state.selected_color = main_color
-        
-        additional_preferences = st.text_input(
-            "Дополнительные пожелания (опционально)",
-            placeholder="Например: больше зелени, деревянные акценты"
+    st.divider()
+    
+    st.header("🎨 Создание дизайн-проекта")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    if 'selected_styles' not in st.session_state:
+        st.session_state.selected_styles = []
+    if 'selected_color' not in st.session_state:
+        default_color = "#CCCCCC" if st.session_state.get('theme') == 'light' else "#FFFFFF"
+        st.session_state.selected_color = default_color
+    
+    with col1:
+        styles = st.multiselect(
+            "Выберите стили (можно несколько)",
+            ["Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прованс", "Нейтральный"],
+            default=st.session_state.selected_styles,
+            help="Выберите хотя бы один стиль для создания дизайна",
+            key="styles_multiselect"
         )
-        
-        generate_button = st.button("✨ Создать дизайн-проект", type="primary", key="generate_design")
-        
-        if generate_button:
-            if not styles:
-                st.error("Выберите хотя бы один стиль")
-            else:
-                with st.spinner("🎨 Создаю дизайн-проект..."):
-                    try:
-                        dalle_prompt = call_gemini(
-                            SYSTEM_PROMPT_BANANA_ENGINEER,
-                            f"""Room analysis:
+        st.session_state.selected_styles = styles
+    
+    with col2:
+        main_color = st.color_picker("Основной цвет", st.session_state.selected_color, key="color_select")
+        st.session_state.selected_color = main_color
+    
+    additional_preferences = st.text_input(
+        "Дополнительные пожелания (опционально)",
+        placeholder="Например: больше зелени, деревянные акценты"
+    )
+    
+    generate_button = st.button("✨ Создать дизайн-проект", type="primary", key="generate_design")
+    
+    if generate_button:
+        if not styles:
+            st.error("Выберите хотя бы один стиль")
+        else:
+            with st.spinner("🎨 Создаю дизайн-проект..."):
+                try:
+                    dalle_prompt = call_gemini(
+                        SYSTEM_PROMPT_BANANA_ENGINEER,
+                        f"""Room analysis:
 {st.session_state.analysis}
 
 Room type: {st.session_state.room_type}
-Main purpose: {st.session_state.purpose}
-Design styles: {', '.join(styles)}
-Main color: {main_color}
-Additional preferences: {additional_preferences if additional_preferences else 'None'}
+Purpose: {st.session_state.purpose}
+Styles: {', '.join(styles)}
+Accent color: {main_color}
+Additional preferences: {additional_preferences if additional_preferences else 'none'}
 
-Create a detailed and specific prompt for an image generation model that will transform this room according to the requirements."""
-                        )
-                        
-                        design_url = generate_image(dalle_prompt)
-                        
-                        if design_url:
-                            new_image_data = {
-                                'url': design_url,
-                                'prompt': dalle_prompt,
-                                'iterations': 1
-                            }
-                            
-                            st.session_state.images.append(new_image_data)
-                            st.session_state.selected_variant_idx = len(st.session_state.images) - 1
-                            auto_save_project()
-                            st.rerun()
-                    except Exception as e:
-                        st.error(f"Ошибка при создании дизайна: {str(e)}")
-                        st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
-        
-        if st.session_state.images:
-            st.divider()
-            st.header("🖼️ Результаты дизайна")
+Create the prompt now.""",
+                        return_json_key="prompt"
+                    )
+                    
+                    image_url = generate_image(st.session_state.uploaded_image_bytes, dalle_prompt)
+                    
+                    st.session_state.images.append({
+                        'url': image_url,
+                        'prompt': dalle_prompt,
+                        'iterations': 0
+                    })
+                    
+                    auto_save_project()
+                    st.success("✅ Дизайн-проект создан!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Ошибка при создании дизайн-проекта: {str(e)}")
+                    st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
+
+if st.session_state.images:
+    st.divider()
+    st.header("🖼️ Варианты дизайна")
+    
+    for idx, img_data in enumerate(st.session_state.images):
+        with st.container():
+            col1, col2 = st.columns([3, 2])
             
-            selected_idx = st.session_state.selected_variant_idx if st.session_state.selected_variant_idx is not None else 0
+            with col1:
+                st.image(img_data['url'], use_container_width=True)
             
-            if selected_idx is not None and selected_idx < len(st.session_state.images):
-                col1, col2 = st.columns([1, 2])
+            with col2:
+                st.markdown(f"**Вариант {idx + 1}**")
+                st.caption(f"Итераций: {img_data['iterations']}")
                 
-                with col1:
-                    st.markdown("**Выберите вариант:**")
-                    for i, img_data in enumerate(st.session_state.images):
-                        btn_label = f"Вариант {i + 1}"
-                        if st.button(btn_label, key=f"select_variant_{i}", use_container_width=True):
-                            st.session_state.selected_variant_idx = i
-                            st.rerun()
-                
-                with col2:
-                    selected_image = st.session_state.images[selected_idx]
+                with st.expander("📝 Редактировать промпт", expanded=False):
+                    edited_prompt = st.text_area(
+                        "Промпт",
+                        value=img_data['prompt'],
+                        height=150,
+                        key=f"prompt_edit_{idx}",
+                        label_visibility="collapsed"
+                    )
                     
-                    col2_1, col2_2 = st.columns(2)
-                    
-                    with col2_1:
-                        st.markdown("**Исходное помещение:**")
-                        if st.session_state.uploaded_image_b64:
-                            image_bytes = base64.b64decode(st.session_state.uploaded_image_b64)
-                            st.image(image_bytes, use_container_width=True, output_format="auto")
-                    
-                    with col2_2:
-                        st.markdown("**Дизайн-проект:**")
-                        st.image(selected_image['url'], use_container_width=True, output_format="auto")
+                    if st.button("🔄 Перегенерировать", key=f"regen_{idx}", use_container_width=True):
+                        with st.spinner("🎨 Генерирую новый вариант..."):
+                            try:
+                                design_image_bytes = get_design_image_bytes(img_data['url'])
+                                new_image_url = generate_image(design_image_bytes, edited_prompt)
+                                st.session_state.images.append({
+                                    'url': new_image_url,
+                                    'prompt': edited_prompt,
+                                    'iterations': img_data['iterations'] + 1
+                                })
+                                auto_save_project()
+                                st.success("✅ Новый вариант создан!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Ошибка: {str(e)}")
                 
                 st.divider()
                 
-                col_edit, col_generate, col_delete = st.columns(3)
+                st.markdown("**🔧 Доработка естественным языком**")
+                feedback = st.text_area(
+                    "Опишите желаемые изменения",
+                    placeholder="Например: сделать стены светлее, добавить больше растений, заменить диван на угловой",
+                    height=100,
+                    key=f"feedback_input_{idx}"
+                )
                 
-                with col_edit:
-                    if st.button("✏️ Редактировать", key="edit_design", use_container_width=True):
-                        st.session_state.show_edit_form = not st.session_state.get('show_edit_form', False)
-                
-                with col_generate:
-                    if st.button("🔄 Создать еще", key="generate_more", use_container_width=True):
-                        st.session_state.show_generate_form = not st.session_state.get('show_generate_form', False)
-                
-                with col_delete:
-                    if st.button("🗑️ Удалить", key="delete_variant", use_container_width=True):
-                        st.session_state.images.pop(selected_idx)
-                        if st.session_state.images:
-                            st.session_state.selected_variant_idx = min(selected_idx, len(st.session_state.images) - 1)
-                        else:
-                            st.session_state.selected_variant_idx = None
-                        auto_save_project()
-                        st.rerun()
-                
-                if st.session_state.get('show_edit_form', False):
-                    st.subheader("Отредактировать дизайн")
-                    
-                    edit_styles = st.multiselect(
-                        "Измените стили",
-                        ["Скандинавский", "Лофт", "Минимализм", "Современный", "Классический", "Эко", "Японский", "Прованс", "Нейтральный"],
-                        default=st.session_state.selected_styles,
-                        key="edit_styles"
-                    )
-                    
-                    edit_color = st.color_picker("Измените основной цвет", st.session_state.selected_color, key="edit_color")
-                    
-                    edit_preferences = st.text_input(
-                        "Новые пожелания",
-                        placeholder="Например: темнее, больше минимализма",
-                        key="edit_preferences"
-                    )
-                    
-                    if st.button("🔄 Переделать дизайн", type="primary", key="refine_design"):
-                        st.session_state.selected_styles = edit_styles
-                        st.session_state.selected_color = edit_color
-                        
-                        with st.spinner("🔄 Переделываю дизайн..."):
+                if st.button("🎨 Применить изменения", type="primary", key=f"apply_changes_{idx}", use_container_width=True):
+                    if feedback:
+                        with st.spinner("🎨 Анализирую дизайн и создаю улучшенную версию..."):
                             try:
-                                refine_prompt = call_gemini(
-                                    SYSTEM_PROMPT_REFINE_ENGINEER,
-                                    f"""Original prompt:
-{selected_image['prompt']}
-
-New requirements:
-- Styles: {', '.join(edit_styles) if edit_styles else 'Keep original'}
-- Main color: {edit_color if edit_color else 'Keep original'}
-- Additional notes: {edit_preferences if edit_preferences else 'None'}
-
-Refine the prompt based on new requirements."""
+                                refined_prompt = refine_design_with_vision(
+                                    img_data['url'],
+                                    img_data['prompt'],
+                                    feedback,
+                                    SYSTEM_PROMPT_REFINE_ENGINEER
                                 )
                                 
-                                refined_design_url = generate_image(refine_prompt)
+                                design_image_bytes = get_design_image_bytes(img_data['url'])
+                                new_image_url = generate_image(design_image_bytes, refined_prompt)
                                 
-                                if refined_design_url:
-                                    st.session_state.images[selected_idx] = {
-                                        'url': refined_design_url,
-                                        'prompt': refine_prompt,
-                                        'iterations': selected_image.get('iterations', 1) + 1
-                                    }
-                                    auto_save_project()
-                                    st.rerun()
+                                st.session_state.images.append({
+                                    'url': new_image_url,
+                                    'prompt': refined_prompt,
+                                    'iterations': img_data['iterations'] + 1
+                                })
+                                
+                                auto_save_project()
+                                st.success("✅ Новый вариант создан!")
+                                st.rerun()
                             except Exception as e:
-                                st.error(f"Ошибка при переделке: {str(e)}")
+                                st.error(f"Ошибка при доработке дизайна: {str(e)}")
+                    else:
+                        st.warning("Опишите желаемые изменения")
                 
                 st.divider()
-                st.header("💡 Рекомендации")
                 
-                if st.session_state.saved_recommendations:
-                    st.markdown(st.session_state.saved_recommendations)
-                
-                if st.button("📝 Создать рекомендации", key="generate_recommendations"):
-                    selected_design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
-                    design_image_bytes = get_design_image_bytes(selected_design_url)
+                if st.button("✅ Выбрать этот дизайн", type="primary", key=f"select_{idx}", use_container_width=True):
+                    selected_variant = st.session_state.images[idx]
+                    st.session_state.images = [selected_variant]
+                    st.session_state.selected_variant_idx = 0
+                    st.session_state.saved_recommendations = None
+                    st.session_state.saved_shopping_list = None
+                    st.session_state.needs_generation = True
                     
-                    with st.spinner("📝 Формирую рекомендации..."):
+                    if st.session_state.current_project_id:
+                        db = SessionLocal()
                         try:
-                            recommendations = call_gemini_vision_markdown(
-                                """Ты — эксперт по дизайну интерьеров и материалам отделки. 
+                            db.query(DesignVariant).filter(
+                                DesignVariant.project_id == st.session_state.current_project_id
+                            ).delete()
+                            db.commit()
+                        except Exception as e:
+                            st.error(f"Ошибка удаления вариантов: {str(e)}")
+                            db.rollback()
+                        finally:
+                            db.close()
+                    
+                    auto_save_project()
+                    st.rerun()
+            
+            st.divider()
+    
+    if ('selected_variant_idx' in st.session_state and 
+        st.session_state.selected_variant_idx is not None and 
+        0 <= st.session_state.selected_variant_idx < len(st.session_state.images)):
+        st.divider()
+        st.header("📋 Финальные рекомендации")
+        
+        if st.session_state.get('needs_generation', False):
+            st.session_state.needs_generation = False
+            
+            selected_design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
+            design_image_bytes = get_design_image_bytes(selected_design_url)
+            
+            with st.spinner("📝 Формирую рекомендации..."):
+                try:
+                    recommendations = call_gemini_vision_markdown(
+                        """Ты — эксперт по дизайну интерьеров и материалам отделки. 
 
 ⚡ КРИТИЧНО: НАЧНИ СРАЗУ СО СПИСКА РЕКОМЕНДАЦИЙ БЕЗ ВВЕДЕНИЯ!
 Не пиши 'Я проанализировал', 'На основе анализа', 'Рассмотрев изображения' и подобные фразы.
@@ -796,7 +746,7 @@ Refine the prompt based on new requirements."""
 6. Декору и аксессуарам (только для добавленных элементов)
 
 Будь конкретным: указывай бренды, артикулы, примерные цены (в рублях).""",
-                                f"""Тип помещения: {st.session_state.room_type}
+                        f"""Тип помещения: {st.session_state.room_type}
 Цель: {st.session_state.purpose}
 
 Анализ исходного помещения:
@@ -806,31 +756,82 @@ Refine the prompt based on new requirements."""
 ВТОРОЕ ИЗОБРАЖЕНИЕ (справа): финальный дизайн
 
 Сравни эти два изображения и дай рекомендации ТОЛЬКО по измененным элементам.""",
-                                design_image_bytes,
-                                st.session_state.uploaded_image_bytes
-                            )
-                            
-                            st.session_state.saved_recommendations = recommendations
-                            auto_save_project()
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Ошибка при формировании рекомендаций: {str(e)}")
-                            st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
-                
-                st.divider()
-                st.header("🛒 Список покупок")
-                
-                if st.session_state.saved_shopping_list:
-                    st.markdown(st.session_state.saved_shopping_list)
-                
-                if st.button("📝 Создать список покупок", key="generate_shopping_list"):
-                    selected_design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
-                    design_image_bytes = get_design_image_bytes(selected_design_url)
+                        design_image_bytes,
+                        st.session_state.uploaded_image_bytes
+                    )
+                    st.session_state.saved_recommendations = recommendations
+                    st.session_state.needs_generation = False
+                    auto_save_project()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Ошибка при генерации рекомендаций: {str(e)}")
+                    st.warning("Попробуйте нажать кнопку 'Обновить рекомендации' ниже для повторной генерации")
+        
+        st.subheader("💡 Детальные рекомендации по материалам")
+        if st.session_state.saved_recommendations:
+            st.markdown(st.session_state.saved_recommendations)
+        
+        if st.button("📝 Обновить рекомендации", key="get_recommendations"):
+            selected_design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
+            design_image_bytes = get_design_image_bytes(selected_design_url)
+            
+            with st.spinner("📝 Формирую рекомендации..."):
+                try:
+                    recommendations = call_gemini_vision_markdown(
+                        """Ты — эксперт по дизайну интерьеров и материалам отделки. 
+
+⚡ КРИТИЧНО: НАЧНИ СРАЗУ СО СПИСКА РЕКОМЕНДАЦИЙ БЕЗ ВВЕДЕНИЯ!
+Не пиши 'Я проанализировал', 'На основе анализа', 'Рассмотрев изображения' и подобные фразы.
+Переходи прямо к рекомендациям — число 1, число 2, и т.д.
+
+Тебе показаны два изображения: 1) исходное помещение, 2) финальный дизайн.
+ВАЖНО: Рекомендуй ТОЛЬКО то, что реально изменилось при переходе от исходного к финальному дизайну.
+Не советуй менять то, что не менялось.
+
+Дай детальные рекомендации по материалам и отделке ТОЛЬКО для новых или измененных элементов:
+1. Отделке стен (если она менялась)
+2. Напольному покрытию (если оно менялось)
+3. Потолку (если он менялся)
+4. Мебели (конкретные рекомендации с размерами только для новой мебели)
+5. Освещению (только для добавленных или замененных светильников)
+6. Декору и аксессуарам (только для добавленных элементов)
+
+Будь конкретным: указывай бренды, артикулы, примерные цены (в рублях).""",
+                        f"""Тип помещения: {st.session_state.room_type}
+Цель: {st.session_state.purpose}
+
+Анализ исходного помещения:
+{st.session_state.analysis}
+
+ПЕРВОЕ ИЗОБРАЖЕНИЕ (слева): исходное помещение
+ВТОРОЕ ИЗОБРАЖЕНИЕ (справа): финальный дизайн
+
+Сравни эти два изображения и дай рекомендации ТОЛЬКО по измененным элементам.""",
+                        design_image_bytes,
+                        st.session_state.uploaded_image_bytes
+                    )
                     
-                    with st.spinner("🛒 Создаю список покупок..."):
-                        try:
-                            shopping_list = call_gemini_vision_markdown(
-                                """Ты — эксперт по закупкам материалов для ремонта. 
+                    st.session_state.saved_recommendations = recommendations
+                    auto_save_project()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Ошибка при формировании рекомендаций: {str(e)}")
+                    st.error("Пожалуйста, попробуйте еще раз или проверьте ваш API ключ.")
+        
+        st.divider()
+        st.header("🛒 Список покупок")
+        
+        if st.session_state.saved_shopping_list:
+            st.markdown(st.session_state.saved_shopping_list)
+        
+        if st.button("📝 Создать список покупок", key="generate_shopping_list"):
+            selected_design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
+            design_image_bytes = get_design_image_bytes(selected_design_url)
+            
+            with st.spinner("🛒 Создаю список покупок..."):
+                try:
+                    shopping_list = call_gemini_vision_markdown(
+                        """Ты — эксперт по закупкам материалов для ремонта. 
 
 ⚡ КРИТИЧНО: НАЧНИ СРАЗУ СО СПИСКА ПОКУПОК БЕЗ ВВЕДЕНИЯ!
 Не пиши 'Я проанализировал', 'На основе анализа', 'Рассмотрев изображения' и подобные фразы.
@@ -853,7 +854,7 @@ Refine the prompt based on new requirements."""
 1. **Название товара (артикул)** - описание
    - Количество: X шт/м²/л
    - Цена: ~X руб""",
-                                f"""Тип помещения: {st.session_state.room_type}
+                        f"""Тип помещения: {st.session_state.room_type}
 
 Рекомендации по материалам:
 {st.session_state.saved_recommendations if st.session_state.saved_recommendations else 'Используй анализ изображения'}
@@ -862,94 +863,43 @@ Refine the prompt based on new requirements."""
 ВТОРОЕ ИЗОБРАЖЕНИЕ (справа): финальный дизайн
 
 Сравни эти два изображения и создай список покупок ТОЛЬКО для измененных элементов.""",
-                                design_image_bytes,
-                                st.session_state.uploaded_image_bytes
-                            )
-                            st.session_state.saved_shopping_list = shopping_list
-                            auto_save_project()
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Ошибка при создании списка: {str(e)}")
-                
-                st.divider()
-                
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    if st.button("📥 Экспортировать в PDF", type="primary", key="export_pdf", use_container_width=True):
-                        try:
-                            if not st.session_state.saved_recommendations or not st.session_state.saved_shopping_list:
-                                st.error("❌ Сначала создайте рекомендации и список покупок")
-                            else:
-                                with st.spinner("📄 Генерирую PDF..."):
-                                    design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
-                                    pdf_bytes = generate_design_project_pdf(
-                                        st.session_state.room_type,
-                                        st.session_state.saved_recommendations,
-                                        st.session_state.saved_shopping_list,
-                                        design_url
-                                    )
-                                    
-                                    moscow_time = get_moscow_time()
-                                    filename = f"design_project_{moscow_time.strftime('%d_%m_%Y_%H_%M')}.pdf"
-                                    
-                                    st.download_button(
-                                        label="💾 Скачать PDF",
-                                        data=pdf_bytes,
-                                        file_name=filename,
-                                        mime="application/pdf",
-                                        key="pdf_download"
-                                    )
-                                    st.success("✅ PDF готов к скачиванию!")
-                        except Exception as e:
-                            st.error(f"Ошибка при экспорте: {str(e)}")
-
-else:
-    st.title("📚 Статьи по интерьерному дизайну")
-    st.markdown("Узнайте о стилях, цветах и трендах 2025 года")
-    
-    col1, col2 = st.columns([1, 3])
-    
-    with col1:
-        st.markdown("### 🔍 Фильтры")
-        categories = ["Все"] + get_all_categories()
-        selected_category = st.selectbox(
-            "Категория",
-            categories,
-            key="category_filter"
-        )
-        st.session_state.articles_filter = selected_category
-    
-    with col2:
-        if st.session_state.selected_article_id:
-            article = get_article_by_id(st.session_state.selected_article_id)
-            if article:
-                st.markdown(f"### {article['title']}")
-                st.markdown(f"**📅 {article['date']}** | **📌 {article['category']}**")
-                st.markdown(article['content'])
-                
-                st.divider()
-                if st.button("← Вернуться к списку", key="back_to_list"):
-                    st.session_state.selected_article_id = None
+                        design_image_bytes,
+                        st.session_state.uploaded_image_bytes
+                    )
+                    st.session_state.saved_shopping_list = shopping_list
+                    auto_save_project()
                     st.rerun()
-        else:
-            if selected_category == "Все":
-                articles = get_articles_sorted_by_date()
-            else:
-                articles = get_articles_by_category(selected_category)
-            
-            if articles:
-                st.markdown(f"### Найдено {len(articles)} статей")
-                for article in articles:
-                    with st.container():
-                        col_content, col_btn = st.columns([5, 1])
-                        with col_content:
-                            st.markdown(f"**{article['title']}**")
-                            st.markdown(f"*{article['category']}* — {article['date']}")
-                            st.markdown(article['excerpt'])
-                        with col_btn:
-                            if st.button("Читать", key=f"read_{article['id']}", use_container_width=True):
-                                st.session_state.selected_article_id = article['id']
-                                st.rerun()
-                        st.divider()
-            else:
-                st.info("📭 Статей не найдено в этой категории")
+                except Exception as e:
+                    st.error(f"Ошибка при создании списка: {str(e)}")
+        
+        st.divider()
+        
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("📥 Экспортировать в PDF", type="primary", key="export_pdf", use_container_width=True):
+                try:
+                    if not st.session_state.saved_recommendations or not st.session_state.saved_shopping_list:
+                        st.error("❌ Сначала создайте рекомендации и список покупок")
+                    else:
+                        with st.spinner("📄 Генерирую PDF..."):
+                            design_url = st.session_state.images[st.session_state.selected_variant_idx]['url']
+                            pdf_bytes = generate_design_project_pdf(
+                                st.session_state.room_type,
+                                st.session_state.saved_recommendations,
+                                st.session_state.saved_shopping_list,
+                                design_url
+                            )
+                            
+                            moscow_time = get_moscow_time()
+                            filename = f"design_project_{moscow_time.strftime('%d_%m_%Y_%H_%M')}.pdf"
+                            
+                            st.download_button(
+                                label="💾 Скачать PDF",
+                                data=pdf_bytes,
+                                file_name=filename,
+                                mime="application/pdf",
+                                key="pdf_download"
+                            )
+                            st.success("✅ PDF готов к скачиванию!")
+                except Exception as e:
+                    st.error(f"Ошибка при экспорте: {str(e)}")
